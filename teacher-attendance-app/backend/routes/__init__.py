@@ -4,8 +4,10 @@ from flask import Blueprint
 routes_bp = Blueprint('routes', __name__)
 
 # Import routes to register them with the blueprint
-from .subjects import *
-from .semesters import *
-from .schedules import *
-from .teachers import *
-from .assignments import *
+from .subjects import subjects_bp
+from .semesters import semesters_bp
+from .schedules import schedules_bp
+from .teachers import teachers_bp
+from .assignments import assignments_bp
+from .teaching_assignments import teaching_assignments_bp
+from .salary_calculations import salary_calculations_bp

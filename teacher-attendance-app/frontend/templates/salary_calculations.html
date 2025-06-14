@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Tính lương{% endblock %}
+{% block page_title %}Tính lương giảng viên{% endblock %}
+{% block breadcrumb %}Trang chủ / Tính lương{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3>Quản lý tính lương</h3>
+    </div>
+    <div class="card-body">
+        <button class="btn btn-primary" onclick="showCalculateModal()">Tính lương tháng</button>
+        
+        <div class="table-responsive mt-3">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Giảng viên</th>
+                        <th>Kỳ tính</th>
+                        <th>Lương cơ bản</th>
+                        <th>Tiền giảng dạy</th>
+                        <th>Phụ cấp</th>
+                        <th>Tổng trước trừ</th>
+                        <th>Thực lĩnh</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for calc in calculations %}
+                    <tr>
+                        <td>{{ calc.id }}</td>
+                        <td>{{ calc.teacher.name if calc.teacher else 'N/A' }}</td>
+                        <td>{{ calc.calculation_period }}</td>
+                        <td>{{ "{:,.0f}".format(calc.base_salary) }} VND</td>
+                        <td>{{ "{:,.0f}".format(calc.teaching_amount) }} VND</td>
+                        <td>{{ "{:,.0f}".format(calc.position_allowance) }} VND</td>
+                        <td>{{ "{:,.0f}".format(calc.gross_salary) }} VND</td>
+                        <td>{{ "{:,.0f}".format(calc.net_salary) }} VND</td>
+                        <td>
+                            <span class="badge badge-{{ 'success' if calc.status == 'approved' else 'warning' }}">
+                                {{ calc.status }}
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-info" onclick="viewDetails({{ calc.id }})">Chi tiết</button>
+                            {% if calc.status == 'calculated' %}
+                            <button class="btn btn-sm btn-success" onclick="approveCalculation({{ calc.id }})">Duyệt</button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

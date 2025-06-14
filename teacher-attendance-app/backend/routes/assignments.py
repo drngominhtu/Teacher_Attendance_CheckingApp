@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
-from ..models.assignment import Assignment
-from ..models.teacher import Teacher
-from ..models.subject import Subject
+from models.assignment import Assignment
+from models.teacher import Teacher
+from models.subject import Subject
 
 assignments_bp = Blueprint('assignments', __name__)
 

@@ -57,9 +57,12 @@
     <div class="card">
         <div class="card-header">
             <h3>Danh sách phân công</h3>
+            <button class="btn btn-info btn-sm" onclick="refreshAssignmentsList()">
+                <i class="fas fa-sync-alt"></i> Làm mới
+            </button>
         </div>
         <div class="card-body">
-            <table class="table">
+            <table class="table" id="assignments-table">
                 <thead>
                     <tr>
                         <th>STT</th>
@@ -70,9 +73,9 @@
                         <th>Thao tác</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="assignments-tbody">
                     {% for assignment in assignments %}
-                    <tr>
+                    <tr data-assignment-id="{{ assignment.id }}">
                         <td>{{ loop.index }}</td>
                         <td>{{ assignment.teacher.name if assignment.teacher else 'N/A' }}</td>
                         <td>{{ assignment.subject.name if assignment.subject else 'N/A' }}</td>
@@ -129,26 +132,79 @@
             if (data.success) {
                 showAlert('Phân công đã được tạo thành công!', 'success');
                 document.getElementById('assignment-form').reset();
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
+                
+                // Refresh the list
+                refreshAssignmentsList();
             } else {
                 showAlert('Lỗi: ' + data.message, 'error');
-                isSubmitting = false;
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-plus"></i> Tạo phân công';
             }
         })
         .catch(error => {
             showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+        })
+        .finally(() => {
             isSubmitting = false;
             submitBtn.disabled = false;
             submitBtn.innerHTML = '<i class="fas fa-plus"></i> Tạo phân công';
         });
     });
 
+    // Refresh assignments list
+    function refreshAssignmentsList() {
+        fetch('/api/assignments/list')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateAssignmentsTable(data.assignments);
+            } else {
+                console.error('Error refreshing assignments list:', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error refreshing assignments list:', error);
+        });
+    }
+
+    // Update assignments table
+    function updateAssignmentsTable(assignments) {
+        const tbody = document.getElementById('assignments-tbody');
+        tbody.innerHTML = '';
+        
+        if (assignments.length === 0) {
+            const row = document.createElement('tr');
+            row.innerHTML = '<td colspan="6" style="text-align: center;">Chưa có phân công nào</td>';
+            tbody.appendChild(row);
+            return;
+        }
+        
+        assignments.forEach((assignment, index) => {
+            const row = document.createElement('tr');
+            row.setAttribute('data-assignment-id', assignment.id);
+            
+            const semesterInfo = assignment.semester_name && assignment.semester_year 
+                ? `${assignment.semester_name} - ${assignment.semester_year}` 
+                : 'Chưa phân kì';
+            
+            const createdDate = new Date(assignment.created_at).toLocaleDateString('vi-VN');
+            
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td>${assignment.teacher_name || 'N/A'}</td>
+                <td>${assignment.subject_name || 'N/A'}</td>
+                <td>${semesterInfo}</td>
+                <td>${createdDate}</td>
+                <td>
+                    <button class="btn btn-danger btn-sm" onclick="deleteAssignment(${assignment.id})">
+                        <i class="fas fa-trash"></i> Xóa
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
     function deleteAssignment(id) {
-        if (confirmDelete('Bạn có chắc chắn muốn xóa phân công này?')) {
+        if (confirm('Bạn có chắc chắn muốn xóa phân công này?')) {
             fetch(`/api/assignments/${id}`, {
                 method: 'DELETE'
             })
@@ -156,9 +212,7 @@
             .then(data => {
                 if (data.success) {
                     showAlert('Phân công đã được xóa thành công!', 'success');
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1500);
+                    refreshAssignmentsList();
                 } else {
                     showAlert('Lỗi: ' + data.message, 'error');
                 }
@@ -167,6 +221,23 @@
                 showAlert('Có lỗi xảy ra: ' + error.message, 'error');
             });
         }
+    }
+
+    // Alert function
+    function showAlert(message, type) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="close" data-dismiss="alert">
+                <span>&times;</span>
+            </button>
+        `;
+        document.querySelector('.content').insertBefore(alertDiv, document.querySelector('.content').firstChild);
+        
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 5000);
     }
     </script>
     {% endblock %}

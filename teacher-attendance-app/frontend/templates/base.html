@@ -30,7 +30,7 @@
                 </li>
                 <li>
                     <a href="{{ url_for('semesters') }}" {% if request.endpoint == 'semesters' %}class="active"{% endif %}>
-                        <i class="fas fa-calendar-alt"></i>
+                        <i class="fas fa-calendar"></i>
                         Quản lý kì học
                     </a>
                 </li>
@@ -46,12 +46,28 @@
                         Quản lý giảng viên
                     </a>
                 </li>
+                <!--
                 <li>
                     <a href="{{ url_for('assignments') }}" {% if request.endpoint == 'assignments' %}class="active"{% endif %}>
                         <i class="fas fa-user-tie"></i>
                         Phân công giảng viên
                     </a>
                 </li>
+                -->
+                <li>
+                    <a href="{{ url_for('teaching_assignments') }}" {% if request.endpoint == 'teaching_assignments' %}class="active"{% endif %}>
+                        <i class="fas fa-chalkboard-teacher"></i>
+                        Phân công giảng dạy
+                    </a>
+                </li>
+                <!--
+                <li>
+                    <a href="{{ url_for('salary_calculations') }}" {% if request.endpoint == 'salary_calculations' %}class="active"{% endif %}>
+                        <i class="fas fa-calculator"></i>
+                        Tính lương
+                    </a>
+                </li>
+                -->
             </ul>
         </nav>
     </div>

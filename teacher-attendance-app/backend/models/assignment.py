@@ -1,16 +1,21 @@
-from sqlalchemy import Column, Integer, ForeignKey
-from sqlalchemy.orm import relationship
-from .database import Base
+from database import db
+from models.base import BaseModel
 
-class Assignment(Base):
+class Assignment(BaseModel):
     __tablename__ = 'assignments'
 
-    id = Column(Integer, primary_key=True, index=True)
-    teacher_id = Column(Integer, ForeignKey('teachers.id'))
-    subject_id = Column(Integer, ForeignKey('subjects.id'))
+    teacher_id = db.Column(db.Integer, db.ForeignKey('teachers.id'), nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey('subjects.id'), nullable=False)
+    semester_id = db.Column(db.Integer, db.ForeignKey('semesters.id'), nullable=True)
 
-    teacher = relationship("Teacher", back_populates="assignments")
-    subject = relationship("Subject", back_populates="assignments")
+    def to_dict(self):
+        base_dict = super().to_dict()
+        assignment_dict = {
+            'teacher_id': self.teacher_id,
+            'subject_id': self.subject_id,
+            'semester_id': self.semester_id,
+        }
+        return {**base_dict, **assignment_dict}
 
     def __repr__(self):
         return f"<Assignment(teacher_id={self.teacher_id}, subject_id={self.subject_id})>"
