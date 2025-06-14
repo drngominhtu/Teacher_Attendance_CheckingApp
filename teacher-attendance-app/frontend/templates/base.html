@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>{% block title %}Hệ thống chấm công giáo viên{% endblock %}</title>
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h1>Hệ thống chấm công</h1>
+            <p>Quản lý giáo viên</p>
+        </div>
+        <nav class="sidebar-nav">
+            <ul>
+                <li>
+                    <a href="{{ url_for('index') }}" {% if request.endpoint == 'index' %}class="active"{% endif %}>
+                        <i class="fas fa-home"></i>
+                        Trang chủ
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('subjects') }}" {% if request.endpoint == 'subjects' %}class="active"{% endif %}>
+                        <i class="fas fa-book"></i>
+                        Quản lý học phần
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('semesters') }}" {% if request.endpoint == 'semesters' %}class="active"{% endif %}>
+                        <i class="fas fa-calendar-alt"></i>
+                        Quản lý kì học
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('schedules') }}" {% if request.endpoint == 'schedules' %}class="active"{% endif %}>
+                        <i class="fas fa-clock"></i>
+                        Thời khóa biểu
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('teachers') }}" {% if request.endpoint == 'teachers' %}class="active"{% endif %}>
+                        <i class="fas fa-users"></i>
+                        Quản lý giảng viên
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('assignments') }}" {% if request.endpoint == 'assignments' %}class="active"{% endif %}>
+                        <i class="fas fa-user-tie"></i>
+                        Phân công giảng viên
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <header class="main-header">
+            <h2>{% block page_title %}{% endblock %}</h2>
+            <div class="breadcrumb">{% block breadcrumb %}{% endblock %}</div>
+        </header>
+
+        <main class="content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

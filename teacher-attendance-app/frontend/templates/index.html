@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>Hệ thống chấm công giáo viên</title>
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h1>Hệ thống chấm công</h1>
+            <p>Quản lý giáo viên</p>
+        </div>
+        <nav class="sidebar-nav">
+            <ul>
+                <li>
+                    <a href="{{ url_for('index') }}" class="active">
+                        <i class="fas fa-home"></i>
+                        Trang chủ
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('subjects') }}">
+                        <i class="fas fa-book"></i>
+                        Quản lý học phần
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('semesters') }}">
+                        <i class="fas fa-calendar-alt"></i>
+                        Quản lý kì học
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('schedules') }}">
+                        <i class="fas fa-clock"></i>
+                        Thời khóa biểu
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('teachers') }}">
+                        <i class="fas fa-users"></i>
+                        Quản lý giảng viên
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('assignments') }}">
+                        <i class="fas fa-user-tie"></i>
+                        Phân công giảng viên
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <header class="main-header">
+            <h2>Trang chủ</h2>
+            <div class="breadcrumb">Trang chủ</div>
+        </header>
+
+        <main class="content">
+            <div class="welcome-stats">
+                <div class="stat-card">
+                    <div class="stat-number">{{ subjects_count or 0 }}</div>
+                    <div class="stat-label">Học phần</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ semesters_count or 0 }}</div>
+                    <div class="stat-label">Kì học</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ teachers_count or 0 }}</div>
+                    <div class="stat-label">Giảng viên</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ total_students or 0 }}</div>
+                    <div class="stat-label">Sinh viên</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ assignments_count or 0 }}</div>
+                    <div class="stat-label">Phân công</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3>Chào mừng đến với hệ thống chấm công!</h3>
+                </div>
+                <div class="card-body">
+                    <p>Hệ thống quản lý chấm công dành cho giáo viên với các chức năng chính:</p>
+                    <ul style="margin-left: 20px; margin-top: 15px;">
+                        <li>Quản lý học phần và môn học với thông tin số sinh viên</li>
+                        <li>Quản lý kì học và năm học</li>
+                        <li>Lập và quản lý thời khóa biểu</li>
+                        <li>Quản lý thông tin giảng viên</li>
+                        <li>Phân công giảng dạy cho từng môn học</li>
+                        <li>Thống kê và báo cáo</li>
+                    </ul>
+                    
+                    <div style="margin-top: 20px;">
+                        <a href="{{ url_for('subjects') }}" class="btn btn-success">
+                            <i class="fas fa-book"></i> Quản lý học phần
+                        </a>
+                        <a href="{{ url_for('teachers') }}" class="btn">
+                            <i class="fas fa-users"></i> Quản lý giảng viên
+                        </a>
+                        <a href="{{ url_for('assignments') }}" class="btn btn-warning">
+                            <i class="fas fa-user-tie"></i> Phân công giảng dạy
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

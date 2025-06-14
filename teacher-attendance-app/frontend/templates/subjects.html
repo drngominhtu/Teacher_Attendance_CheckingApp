@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Học Phần</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    {% extends "base.html" %}
+
+    {% block title %}Quản lý học phần{% endblock %}
+    {% block page_title %}Quản lý học phần{% endblock %}
+    {% block breadcrumb %}Trang chủ / Quản lý học phần{% endblock %}
+
+    {% block content %}
+    <div class="card">
+        <div class="card-header">
+            <h3>Thêm học phần mới</h3>
+        </div>
+        <div class="card-body">
+            <form id="subject-form">
+                <div class="form-group">
+                    <label for="subject-name">Tên học phần:</label>
+                    <input type="text" id="subject-name" name="name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="subject-department">Khoa:</label>
+                    <input type="text" id="subject-department" name="department" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="subject-student-count">Số sinh viên:</label>
+                    <input type="number" id="subject-student-count" name="student_count" class="form-control" min="0" value="0">
+                </div>
+                <button type="submit" class="btn btn-success" id="submit-btn">
+                    <i class="fas fa-plus"></i> Thêm học phần
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3>Danh sách học phần</h3>
+        </div>
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>STT</th>
+                        <th>Tên học phần</th>
+                        <th>Khoa</th>
+                        <th>Số sinh viên</th>
+                        <th>Ngày tạo</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for subject in subjects %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ subject.name }}</td>
+                        <td>{{ subject.department }}</td>
+                        <td>
+                            <span class="badge" style="background-color: #3498db; color: white; padding: 5px 10px; border-radius: 15px;">
+                                {{ subject.student_count }} sinh viên
+                            </span>
+                        </td>
+                        <td>{{ subject.created_at.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            <button class="btn btn-warning btn-sm" onclick="editSubject({{ subject.id }}, '{{ subject.name }}', '{{ subject.department }}', {{ subject.student_count }})">
+                                <i class="fas fa-edit"></i> Sửa
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteSubject({{ subject.id }})">
+                                <i class="fas fa-trash"></i> Xóa
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align: center;">Chưa có học phần nào</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="edit-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; width: 400px;">
+            <h3>Chỉnh sửa học phần</h3>
+            <form id="edit-subject-form">
+                <input type="hidden" id="edit-subject-id">
+                <div class="form-group">
+                    <label for="edit-subject-name">Tên học phần:</label>
+                    <input type="text" id="edit-subject-name" name="name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-subject-department">Khoa:</label>
+                    <input type="text" id="edit-subject-department" name="department" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-subject-student-count">Số sinh viên:</label>
+                    <input type="number" id="edit-subject-student-count" name="student_count" class="form-control" min="0">
+                </div>
+                <button type="submit" class="btn btn-success">Cập nhật</button>
+                <button type="button" class="btn" onclick="closeEditModal()">Hủy</button>
+            </form>
+        </div>
+    </div>
+    {% endblock %}
+
+    {% block scripts %}
+    <script>
+    let isSubmitting = false;
+
+    // Handle subject form submission
+    document.getElementById('subject-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (isSubmitting) return;
+        isSubmitting = true;
+        
+        const submitBtn = document.getElementById('submit-btn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang thêm...';
+        
+        const formData = {
+            name: document.getElementById('subject-name').value,
+            department: document.getElementById('subject-department').value,
+            student_count: parseInt(document.getElementById('subject-student-count').value) || 0
+        };
+
+        fetch('/api/subjects', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('Học phần đã được thêm thành công!', 'success');
+                document.getElementById('subject-form').reset();
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                showAlert('Lỗi: ' + data.message, 'error');
+                isSubmitting = false;
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-plus"></i> Thêm học phần';
+            }
+        })
+        .catch(error => {
+            showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+            isSubmitting = false;
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-plus"></i> Thêm học phần';
+        });
+    });
+
+    // Handle edit subject form submission
+    document.getElementById('edit-subject-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const subjectId = document.getElementById('edit-subject-id').value;
+        const formData = {
+            name: document.getElementById('edit-subject-name').value,
+            department: document.getElementById('edit-subject-department').value,
+            student_count: parseInt(document.getElementById('edit-subject-student-count').value) || 0
+        };
+
+        fetch(`/api/subjects/${subjectId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('Học phần đã được cập nhật thành công!', 'success');
+                closeEditModal();
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                showAlert('Lỗi: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+        });
+    });
+
+    function editSubject(id, name, department, studentCount) {
+        document.getElementById('edit-subject-id').value = id;
+        document.getElementById('edit-subject-name').value = name;
+        document.getElementById('edit-subject-department').value = department;
+        document.getElementById('edit-subject-student-count').value = studentCount;
+        document.getElementById('edit-modal').style.display = 'block';
+    }
+
+    function closeEditModal() {
+        document.getElementById('edit-modal').style.display = 'none';
+    }
+
+    function deleteSubject(id) {
+        if (confirmDelete('Bạn có chắc chắn muốn xóa học phần này?')) {
+            fetch(`/api/subjects/${id}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('Học phần đã được xóa thành công!', 'success');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showAlert('Lỗi: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+            });
+        }
+    }
+    </script>
+    {% endblock %}
+</body>
+</html>

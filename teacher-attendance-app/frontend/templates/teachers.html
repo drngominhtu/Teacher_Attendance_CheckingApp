@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <title>Quản Lý Giảng Viên</title>
+</head>
+<body>
+    {% extends "base.html" %}
+
+    {% block title %}Quản lý giảng viên{% endblock %}
+    {% block page_title %}Quản lý giảng viên{% endblock %}
+    {% block breadcrumb %}Trang chủ / Quản lý giảng viên{% endblock %}
+
+    {% block content %}
+    <div class="card">
+        <div class="card-header">
+            <h3>Thêm giảng viên mới</h3>
+        </div>
+        <div class="card-body">
+            <form id="teacher-form">
+                <div class="form-group">
+                    <label for="teacher-name">Tên giảng viên:</label>
+                    <input type="text" id="teacher-name" name="name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="teacher-department">Khoa:</label>
+                    <input type="text" id="teacher-department" name="department" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="teacher-qualifications">Trình độ học vấn:</label>
+                    <input type="text" id="teacher-qualifications" name="qualifications" class="form-control" placeholder="Ví dụ: Thạc sĩ, Tiến sĩ...">
+                </div>
+                <button type="submit" class="btn btn-success" id="submit-btn">
+                    <i class="fas fa-plus"></i> Thêm giảng viên
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3>Danh sách giảng viên</h3>
+        </div>
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>STT</th>
+                        <th>Tên giảng viên</th>
+                        <th>Khoa</th>
+                        <th>Trình độ</th>
+                        <th>Ngày tạo</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for teacher in teachers %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ teacher.name }}</td>
+                        <td>{{ teacher.department }}</td>
+                        <td>{{ teacher.qualifications or 'Chưa cập nhật' }}</td>
+                        <td>{{ teacher.created_at.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            <button class="btn btn-warning btn-sm" onclick="editTeacher({{ teacher.id }}, '{{ teacher.name }}', '{{ teacher.department }}', '{{ teacher.qualifications or '' }}')">
+                                <i class="fas fa-edit"></i> Sửa
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteTeacher({{ teacher.id }})">
+                                <i class="fas fa-trash"></i> Xóa
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align: center;">Chưa có giảng viên nào</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="edit-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; width: 400px;">
+            <h3>Chỉnh sửa giảng viên</h3>
+            <form id="edit-teacher-form">
+                <input type="hidden" id="edit-teacher-id">
+                <div class="form-group">
+                    <label for="edit-teacher-name">Tên giảng viên:</label>
+                    <input type="text" id="edit-teacher-name" name="name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-teacher-department">Khoa:</label>
+                    <input type="text" id="edit-teacher-department" name="department" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-teacher-qualifications">Trình độ học vấn:</label>
+                    <input type="text" id="edit-teacher-qualifications" name="qualifications" class="form-control">
+                </div>
+                <button type="submit" class="btn btn-success">Cập nhật</button>
+                <button type="button" class="btn" onclick="closeEditModal()">Hủy</button>
+            </form>
+        </div>
+    </div>
+    {% endblock %}
+
+    {% block scripts %}
+    <script>
+    let isSubmitting = false;
+
+    // Handle teacher form submission
+    document.getElementById('teacher-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (isSubmitting) return;
+        isSubmitting = true;
+        
+        const submitBtn = document.getElementById('submit-btn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang thêm...';
+        
+        const formData = {
+            name: document.getElementById('teacher-name').value,
+            department: document.getElementById('teacher-department').value,
+            qualifications: document.getElementById('teacher-qualifications').value
+        };
+
+        fetch('/api/teachers', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('Giảng viên đã được thêm thành công!', 'success');
+                document.getElementById('teacher-form').reset();
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                showAlert('Lỗi: ' + data.message, 'error');
+                isSubmitting = false;
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-plus"></i> Thêm giảng viên';
+            }
+        })
+        .catch(error => {
+            showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+            isSubmitting = false;
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-plus"></i> Thêm giảng viên';
+        });
+    });
+
+    // Handle edit teacher form submission
+    document.getElementById('edit-teacher-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const teacherId = document.getElementById('edit-teacher-id').value;
+        const formData = {
+            name: document.getElementById('edit-teacher-name').value,
+            department: document.getElementById('edit-teacher-department').value,
+            qualifications: document.getElementById('edit-teacher-qualifications').value
+        };
+
+        fetch(`/api/teachers/${teacherId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('Giảng viên đã được cập nhật thành công!', 'success');
+                closeEditModal();
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                showAlert('Lỗi: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+        });
+    });
+
+    function editTeacher(id, name, department, qualifications) {
+        document.getElementById('edit-teacher-id').value = id;
+        document.getElementById('edit-teacher-name').value = name;
+        document.getElementById('edit-teacher-department').value = department;
+        document.getElementById('edit-teacher-qualifications').value = qualifications;
+        document.getElementById('edit-modal').style.display = 'block';
+    }
+
+    function closeEditModal() {
+        document.getElementById('edit-modal').style.display = 'none';
+    }
+
+    function deleteTeacher(id) {
+        if (confirmDelete('Bạn có chắc chắn muốn xóa giảng viên này?')) {
+            fetch(`/api/teachers/${id}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('Giảng viên đã được xóa thành công!', 'success');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showAlert('Lỗi: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+            });
+        }
+    }
+    </script>
+    {% endblock %}
+</body>
+</html>

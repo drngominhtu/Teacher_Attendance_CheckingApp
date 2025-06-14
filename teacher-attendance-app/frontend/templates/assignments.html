@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <title>Quản Lý Phân Công Giảng Viên</title>
+</head>
+<body>
+    {% extends "base.html" %}
+
+    {% block title %}Phân công giảng dạy{% endblock %}
+    {% block page_title %}Phân công giảng dạy{% endblock %}
+    {% block breadcrumb %}Trang chủ / Phân công giảng dạy{% endblock %}
+
+    {% block content %}
+    <div class="card">
+        <div class="card-header">
+            <h3>Tạo phân công mới</h3>
+        </div>
+        <div class="card-body">
+            <form id="assignment-form">
+                <div class="form-group">
+                    <label for="assignment-teacher">Giảng viên:</label>
+                    <select id="assignment-teacher" name="teacher_id" class="form-control" required>
+                        <option value="">Chọn giảng viên</option>
+                        {% for teacher in teachers %}
+                        <option value="{{ teacher.id }}">{{ teacher.name }} - {{ teacher.department }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="assignment-subject">Học phần:</label>
+                    <select id="assignment-subject" name="subject_id" class="form-control" required>
+                        <option value="">Chọn học phần</option>
+                        {% for subject in subjects %}
+                        <option value="{{ subject.id }}">{{ subject.name }} - {{ subject.department }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="assignment-semester">Kì học:</label>
+                    <select id="assignment-semester" name="semester_id" class="form-control">
+                        <option value="">Chọn kì học (tùy chọn)</option>
+                        {% for semester in semesters %}
+                        <option value="{{ semester.id }}">{{ semester.name }} - {{ semester.year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-success" id="submit-btn">
+                    <i class="fas fa-plus"></i> Tạo phân công
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3>Danh sách phân công</h3>
+        </div>
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>STT</th>
+                        <th>Giảng viên</th>
+                        <th>Học phần</th>
+                        <th>Kì học</th>
+                        <th>Ngày tạo</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for assignment in assignments %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ assignment.teacher.name if assignment.teacher else 'N/A' }}</td>
+                        <td>{{ assignment.subject.name if assignment.subject else 'N/A' }}</td>
+                        <td>{{ assignment.semester.name + ' - ' + assignment.semester.year|string if assignment.semester else 'Chưa phân kì' }}</td>
+                        <td>{{ assignment.created_at.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            <button class="btn btn-danger btn-sm" onclick="deleteAssignment({{ assignment.id }})">
+                                <i class="fas fa-trash"></i> Xóa
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align: center;">Chưa có phân công nào</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endblock %}
+
+    {% block scripts %}
+    <script>
+    let isSubmitting = false;
+
+    // Handle assignment form submission
+    document.getElementById('assignment-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (isSubmitting) return;
+        isSubmitting = true;
+        
+        const submitBtn = document.getElementById('submit-btn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang tạo...';
+        
+        const formData = {
+            teacher_id: parseInt(document.getElementById('assignment-teacher').value),
+            subject_id: parseInt(document.getElementById('assignment-subject').value),
+            semester_id: document.getElementById('assignment-semester').value ? 
+                         parseInt(document.getElementById('assignment-semester').value) : null
+        };
+
+        fetch('/api/assignments', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('Phân công đã được tạo thành công!', 'success');
+                document.getElementById('assignment-form').reset();
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                showAlert('Lỗi: ' + data.message, 'error');
+                isSubmitting = false;
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-plus"></i> Tạo phân công';
+            }
+        })
+        .catch(error => {
+            showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+            isSubmitting = false;
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-plus"></i> Tạo phân công';
+        });
+    });
+
+    function deleteAssignment(id) {
+        if (confirmDelete('Bạn có chắc chắn muốn xóa phân công này?')) {
+            fetch(`/api/assignments/${id}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('Phân công đã được xóa thành công!', 'success');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showAlert('Lỗi: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+            });
+        }
+    }
+    </script>
+    {% endblock %}
+</body>
+</html>

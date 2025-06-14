@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <title>Quản Lý Thời Khóa Biểu</title>
+</head>
+<body>
+    {% extends "base.html" %}
+
+    {% block title %}Quản lý thời khóa biểu{% endblock %}
+    {% block page_title %}Quản lý thời khóa biểu{% endblock %}
+    {% block breadcrumb %}Trang chủ / Quản lý thời khóa biểu{% endblock %}
+
+    {% block content %}
+    <div class="card">
+        <div class="card-header">
+            <h3>Thời khóa biểu tuần</h3>
+        </div>
+        <div class="card-body">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <p>Chức năng thời khóa biểu đang được phát triển...</p>
+                <p>Sẽ bao gồm:</p>
+                <ul style="text-align: left; max-width: 400px; margin: 0 auto;">
+                    <li>Lịch giảng dạy theo tuần</li>
+                    <li>Phân bổ thời gian cho từng môn học</li>
+                    <li>Quản lý phòng học</li>
+                    <li>Báo cáo lịch trình</li>
+                </ul>
+            </div>
+            
+            <!-- Temporary schedule grid -->
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Thời gian</th>
+                        <th>Thứ 2</th>
+                        <th>Thứ 3</th>
+                        <th>Thứ 4</th>
+                        <th>Thứ 5</th>
+                        <th>Thứ 6</th>
+                        <th>Thứ 7</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>7:00 - 9:00</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>9:00 - 11:00</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>13:00 - 15:00</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>15:00 - 17:00</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endblock %}
+</body>
+</html>
