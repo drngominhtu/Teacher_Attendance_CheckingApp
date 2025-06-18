@@ -1,66 +1,75 @@
-from sqlalchemy import Column, Integer, String, Numeric, Boolean, Text
+from sqlalchemy import Column, Integer, String, Numeric, Boolean, Text, ForeignKey
 from database import db
 from models.base import BaseModel
 
 class Subject(BaseModel):
     __tablename__ = 'subjects'
 
-    name = db.Column(db.String(200), nullable=False)
-    subject_code = db.Column(db.String(20), unique=True, nullable=True)
-    department = db.Column(db.String(100), nullable=False)
-    credits = db.Column(db.Integer, nullable=False, default=3)  # Số tín chỉ
-    theory_hours = db.Column(db.Integer, default=0)  # Số giờ lý thuyết
-    practice_hours = db.Column(db.Integer, default=0)  # Số giờ thực hành
-    student_count = db.Column(db.Integer, default=0)  # Số sinh viên
-    standard_rate = db.Column(db.Numeric(10, 2), default=0)  # Đơn giá chuẩn
-    subject_coefficient = db.Column(db.Numeric(3, 2), default=1.0)  # Hệ số học phần (1.0 - 1.5)
-    difficulty_level = db.Column(db.String(20), default='normal')  # easy, normal, hard, very_hard
+    # Basic info
+    code = db.Column(db.String(20), unique=True, nullable=True)
+    name = db.Column(db.String(100), nullable=False)
+    credits = db.Column(db.Integer, default=3)
+    
+    # Foreign key with proper reference
+    department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True, default=1)
+    
+    # Detail info
+    theory_hours = db.Column(db.Integer, default=0)
+    practice_hours = db.Column(db.Integer, default=0)
+    total_hours = db.Column(db.Integer, default=0)
+    subject_coefficient = db.Column(db.Numeric(3, 2), default=1.0)
+    difficulty_level = db.Column(db.String(20), default='normal')
     description = db.Column(db.Text, nullable=True)
+    prerequisites = db.Column(db.Text, nullable=True)
+    
+    # Compatibility
+    department = db.Column(db.String(100), nullable=True)
+    student_count = db.Column(db.Integer, default=0)
     is_active = db.Column(db.Boolean, default=True)
     
-    @property
-    def total_hours(self):
-        return self.theory_hours + self.practice_hours
+    # Define relationship
+    department_ref = db.relationship('Department', foreign_keys=[department_id], backref='subjects')
     
     @property
-    def class_coefficient(self):
-        """Tính hệ số lớp dựa trên số sinh viên"""
-        if self.student_count < 20:
-            return -0.3
-        elif 20 <= self.student_count <= 29:
-            return -0.2
-        elif 30 <= self.student_count <= 39:
-            return -0.1
-        elif 40 <= self.student_count <= 49:
-            return 0.0
-        elif 50 <= self.student_count <= 59:
-            return 0.1
-        elif 60 <= self.student_count <= 69:
-            return 0.2
-        elif 70 <= self.student_count <= 79:
-            return 0.3
-        else:  # >= 80
-            return 0.4
+    def total_classes(self):
+        """Count teaching assignments for this subject"""
+        try:
+            from models.teaching_assignment import TeachingAssignment
+            return TeachingAssignment.query.filter_by(subject_id=self.id).count()
+        except:
+            return 0
+    
+    def get_department_info(self):
+        """Get department info using relationship"""
+        return self.department_ref
 
     def to_dict(self):
         base_dict = super().to_dict()
-        subject_dict = {
+        dept_info = self.get_department_info()
+        
+        return {
+            **base_dict,
+            'code': self.code,
             'name': self.name,
-            'subject_code': self.subject_code,
-            'department': self.department,
             'credits': self.credits,
+            'department_id': self.department_id,
             'theory_hours': self.theory_hours,
             'practice_hours': self.practice_hours,
             'total_hours': self.total_hours,
-            'student_count': self.student_count,
-            'standard_rate': float(self.standard_rate) if self.standard_rate else 0,
             'subject_coefficient': float(self.subject_coefficient) if self.subject_coefficient else 1.0,
-            'class_coefficient': self.class_coefficient,
             'difficulty_level': self.difficulty_level,
             'description': self.description,
-            'is_active': self.is_active
+            'prerequisites': self.prerequisites,
+            'department': self.department,
+            'student_count': self.student_count,
+            'is_active': self.is_active,
+            'total_classes': self.total_classes,
+            'total_students': self.student_count,
+            # Related data via relationship
+            'department_name': dept_info.name if dept_info else (self.department or 'N/A'),
+            'department_code': dept_info.code if dept_info else 'N/A',
+            'department_abbreviation': dept_info.abbreviation if dept_info else 'N/A'
         }
-        return {**base_dict, **subject_dict}
 
     def __repr__(self):
-        return f"<Subject(name='{self.name}', students={self.student_count}, subject_coeff={self.subject_coefficient})>"
+        return f"<Subject(code='{self.code}', name='{self.name}', credits={self.credits})>"

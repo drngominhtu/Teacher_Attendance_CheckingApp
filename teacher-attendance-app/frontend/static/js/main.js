@@ -9,6 +9,40 @@ document.addEventListener('DOMContentLoaded', function() {
         link.classList.remove('active');
         if (link.getAttribute('href') === currentPath) {
             link.classList.add('active');
+            // Open parent dropdown if this is a dropdown item
+            const parentDropdown = link.closest('.has-dropdown');
+            if (parentDropdown) {
+                parentDropdown.classList.add('open');
+            }
+        }
+    });
+    
+    // Handle dropdown menu clicks
+    const dropdownToggles = document.querySelectorAll('.dropdown-toggle');
+    dropdownToggles.forEach(toggle => {
+        toggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            const parentLi = this.closest('.has-dropdown');
+            const isOpen = parentLi.classList.contains('open');
+            
+            // Close all other dropdowns
+            document.querySelectorAll('.has-dropdown').forEach(dropdown => {
+                dropdown.classList.remove('open');
+            });
+            
+            // Toggle current dropdown
+            if (!isOpen) {
+                parentLi.classList.add('open');
+            }
+        });
+    });
+    
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.sidebar-nav')) {
+            document.querySelectorAll('.has-dropdown').forEach(dropdown => {
+                dropdown.classList.remove('open');
+            });
         }
     });
 });

@@ -11,7 +11,7 @@
 
     {% block title %}Quản lý giảng viên{% endblock %}
     {% block page_title %}Quản lý giảng viên{% endblock %}
-    {% block breadcrumb %}Trang chủ / Giảng viên{% endblock %}
+    {% block breadcrumb %}Trang chủ / Quản lý giảng viên{% endblock %}
 
     {% block content %}
     <div class="card">
@@ -23,44 +23,72 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="form-group">
+                            <label for="teacher-employee-code">Mã số giảng viên:</label>
+                            <input type="text" id="teacher-employee-code" name="employee_code" class="form-control" placeholder="Ví dụ: GV001">
+                        </div>
+                        <div class="form-group">
                             <label for="teacher-name">Họ và tên: <span class="text-danger">*</span></label>
                             <input type="text" id="teacher-name" name="name" class="form-control" required>
                         </div>
                         <div class="form-group">
-                            <label for="teacher-department">Khoa/Bộ môn: <span class="text-danger">*</span></label>
-                            <input type="text" id="teacher-department" name="department" class="form-control" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="teacher-employee-code">Mã giảng viên:</label>
-                            <input type="text" id="teacher-employee-code" name="employee_code" class="form-control">
-                        </div>
-                        <div class="form-group">
-                            <label for="teacher-email">Email:</label>
-                            <input type="email" id="teacher-email" name="email" class="form-control">
+                            <label for="teacher-birth-date">Ngày sinh:</label>
+                            <input type="date" id="teacher-birth-date" name="birth_date" class="form-control">
                         </div>
                         <div class="form-group">
                             <label for="teacher-phone">Số điện thoại:</label>
                             <input type="tel" id="teacher-phone" name="phone" class="form-control">
                         </div>
+                        <div class="form-group">
+                            <label for="teacher-email">Email:</label>
+                            <input type="email" id="teacher-email" name="email" class="form-control">
+                        </div>
                     </div>
                     <div class="col-md-6">
                         <div class="form-group">
-                            <label for="teacher-degree-level">Bằng cấp:</label>
-                            <select id="teacher-degree-level" name="degree_level" class="form-control">
-                                <option value="dai_hoc">Đại học (Hệ số: 1.3)</option>
-                                <option value="thac_si">Thạc sĩ (Hệ số: 1.5)</option>
-                                <option value="tien_si">Tiến sĩ (Hệ số: 1.7)</option>
-                                <option value="pho_giao_su">Phó giáo sư (Hệ số: 2.0)</option>
-                                <option value="giao_su">Giáo sư (Hệ số: 2.5)</option>
+                            <label for="teacher-department">Thuộc khoa: <span class="text-danger">*</span></label>
+                            <select id="teacher-department" name="department_id" class="form-control" required>
+                                <option value="">Chọn khoa</option>
+                                {% if departments %}
+                                    {% for department in departments %}
+                                    <option value="{{ department.id }}">{{ department.name }} ({{ department.abbreviation }})</option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="" disabled>Đang tải khoa...</option>
+                                {% endif %}
                             </select>
+                            <small class="text-muted">
+                                {% if departments %}
+                                    Có {{ departments|length }} khoa
+                                {% else %}
+                                    Chưa có khoa nào. <a href="{{ url_for('departments') }}">Thêm khoa mới</a>
+                                {% endif %}
+                            </small>
+                        </div>
+                        <div class="form-group">
+                            <label for="teacher-degree">Bằng cấp: <span class="text-danger">*</span></label>
+                            <select id="teacher-degree" name="degree_id" class="form-control" required>
+                                <option value="">Chọn bằng cấp</option>
+                                {% if degrees %}
+                                    {% for degree in degrees %}
+                                    <option value="{{ degree.id }}" data-coefficient="{{ degree.coefficient }}">
+                                        {{ degree.name }} ({{ degree.abbreviation }}) - Hệ số: {{ degree.coefficient }}
+                                    </option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="" disabled>Đang tải bằng cấp...</option>
+                                {% endif %}
+                            </select>
+                            <small class="text-muted">
+                                {% if degrees %}
+                                    Có {{ degrees|length }} bằng cấp
+                                {% else %}
+                                    Chưa có bằng cấp nào. <a href="{{ url_for('degrees') }}">Thêm bằng cấp mới</a>
+                                {% endif %}
+                            </small>
                         </div>
                         <div class="form-group">
                             <label for="teacher-position">Chức vụ:</label>
                             <input type="text" id="teacher-position" name="position" class="form-control" placeholder="Ví dụ: Trưởng bộ môn">
-                        </div>
-                        <div class="form-group">
-                            <label for="teacher-academic-rank">Học hàm:</label>
-                            <input type="text" id="teacher-academic-rank" name="academic_rank" class="form-control" placeholder="Ví dụ: PGS, GS">
                         </div>
                         <div class="form-group">
                             <label for="teacher-base-salary">Lương cơ bản (VND):</label>
@@ -86,24 +114,31 @@
     <div class="card">
         <div class="card-header">
             <h3>Danh sách giảng viên</h3>
-            <button class="btn btn-info btn-sm" onclick="refreshTeachersList()">
-                <i class="fas fa-sync-alt"></i> Làm mới
-            </button>
+            <div class="d-flex">
+                <select id="filter-department" class="form-control mr-2" style="width: 200px;">
+                    <option value="">Tất cả khoa</option>
+                    {% for department in departments %}
+                    <option value="{{ department.id }}">{{ department.name }}</option>
+                    {% endfor %}
+                </select>
+                <button class="btn btn-info btn-sm" onclick="refreshTeachersList()">
+                    <i class="fas fa-sync-alt"></i> Làm mới
+                </button>
+            </div>
         </div>
         <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-striped" id="teachers-table">
                     <thead>
                         <tr>
-                            <th>ID</th>
+                            <th>Mã số</th>
                             <th>Họ và tên</th>
-                            <th>Mã GV</th>
-                            <th>Khoa/Bộ môn</th>
+                            <th>Tuổi</th>
+                            <th>Khoa</th>
                             <th>Bằng cấp</th>
-                            <th>Hệ số GV</th>
-                            <th>Tiền/tiết</th>
-                            <th>Email</th>
+                            <th>Hệ số</th>
                             <th>Điện thoại</th>
+                            <th>Email</th>
                             <th>Trạng thái</th>
                             <th>Thao tác</th>
                         </tr>
@@ -111,15 +146,14 @@
                     <tbody id="teachers-tbody">
                         {% for teacher in teachers %}
                         <tr data-teacher-id="{{ teacher.id }}">
-                            <td>{{ teacher.id }}</td>
-                            <td>{{ teacher.name }}</td>
                             <td>{{ teacher.employee_code or '-' }}</td>
-                            <td>{{ teacher.department }}</td>
-                            <td>{{ teacher.degree_level_display }}</td>
-                            <td>{{ "%.2f"|format(teacher.teacher_coefficient) }}</td>
-                            <td>{{ "{:,.0f}".format(teacher.hourly_rate) }} VND</td>
-                            <td>{{ teacher.email or '-' }}</td>
+                            <td><strong>{{ teacher.name }}</strong></td>
+                            <td>{{ teacher.age or '-' }}</td>
+                            <td>{{ teacher.department_abbreviation }}</td>
+                            <td><span class="badge badge-info">{{ teacher.degree_abbreviation }}</span></td>
+                            <td><strong>{{ "%.1f"|format(teacher.effective_teacher_coefficient) }}</strong></td>
                             <td>{{ teacher.phone or '-' }}</td>
+                            <td>{{ teacher.email or '-' }}</td>
                             <td>
                                 <span class="badge badge-{{ 'success' if teacher.is_active else 'secondary' }}">
                                     {{ 'Hoạt động' if teacher.is_active else 'Ngưng' }}
@@ -150,46 +184,40 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="form-group">
+                            <label for="edit-teacher-employee-code">Mã số:</label>
+                            <input type="text" id="edit-teacher-employee-code" class="form-control">
+                        </div>
+                        <div class="form-group">
                             <label for="edit-teacher-name">Họ và tên:</label>
                             <input type="text" id="edit-teacher-name" class="form-control" required>
                         </div>
                         <div class="form-group">
-                            <label for="edit-teacher-department">Khoa/Bộ môn:</label>
-                            <input type="text" id="edit-teacher-department" class="form-control" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="edit-teacher-employee-code">Mã giảng viên:</label>
-                            <input type="text" id="edit-teacher-employee-code" class="form-control">
-                        </div>
-                        <div class="form-group">
-                            <label for="edit-teacher-email">Email:</label>
-                            <input type="email" id="edit-teacher-email" class="form-control">
+                            <label for="edit-teacher-birth-date">Ngày sinh:</label>
+                            <input type="date" id="edit-teacher-birth-date" class="form-control">
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="form-group">
-                            <label for="edit-teacher-degree-level">Bằng cấp:</label>
-                            <select id="edit-teacher-degree-level" class="form-control">
-                                <option value="dai_hoc">Đại học (Hệ số: 1.3)</option>
-                                <option value="thac_si">Thạc sĩ (Hệ số: 1.5)</option>
-                                <option value="tien_si">Tiến sĩ (Hệ số: 1.7)</option>
-                                <option value="pho_giao_su">Phó giáo sư (Hệ số: 2.0)</option>
-                                <option value="giao_su">Giáo sư (Hệ số: 2.5)</option>
+                            <label for="edit-teacher-department">Khoa:</label>
+                            <select id="edit-teacher-department" class="form-control" required>
+                                {% for department in departments %}
+                                <option value="{{ department.id }}">{{ department.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-teacher-degree">Bằng cấp:</label>
+                            <select id="edit-teacher-degree" class="form-control" required>
+                                {% for degree in degrees %}
+                                <option value="{{ degree.id }}">{{ degree.name }} ({{ degree.abbreviation }})</option>
+                                {% endfor %}
                             </select>
                         </div>
                         <div class="form-group">
                             <label for="edit-teacher-hourly-rate">Tiền dạy một tiết:</label>
                             <input type="number" id="edit-teacher-hourly-rate" class="form-control" min="0">
                         </div>
-                        <div class="form-group">
-                            <label for="edit-teacher-base-salary">Lương cơ bản:</label>
-                            <input type="number" id="edit-teacher-base-salary" class="form-control" min="0">
-                        </div>
                     </div>
-                </div>
-                <div class="form-group">
-                    <label for="edit-teacher-qualifications">Trình độ học vấn:</label>
-                    <textarea id="edit-teacher-qualifications" class="form-control" rows="3"></textarea>
                 </div>
                 <button type="submit" class="btn btn-success">Cập nhật</button>
                 <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Hủy</button>
@@ -202,7 +230,12 @@
     <script>
         let isSubmitting = false;
 
-        // Handle form submission
+        // Filter teachers by department
+        document.getElementById('filter-department').addEventListener('change', function() {
+            refreshTeachersList();
+        });
+
+        // Handle form submission with better error handling
         document.getElementById('teacher-form').addEventListener('submit', function(e) {
             e.preventDefault();
             
@@ -213,19 +246,44 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang thêm...';
             
+            // Validate required fields
+            const name = document.getElementById('teacher-name').value.trim();
+            const departmentId = document.getElementById('teacher-department').value;
+            const degreeId = document.getElementById('teacher-degree').value;
+            
+            if (!name) {
+                showAlert('Vui lòng nhập tên giảng viên', 'error');
+                resetSubmitButton();
+                return;
+            }
+            
+            if (!departmentId) {
+                showAlert('Vui lòng chọn khoa', 'error');
+                resetSubmitButton();
+                return;
+            }
+            
+            if (!degreeId) {
+                showAlert('Vui lòng chọn bằng cấp', 'error');
+                resetSubmitButton();
+                return;
+            }
+            
             const formData = {
-                name: document.getElementById('teacher-name').value,
-                department: document.getElementById('teacher-department').value,
-                employee_code: document.getElementById('teacher-employee-code').value,
-                email: document.getElementById('teacher-email').value,
-                phone: document.getElementById('teacher-phone').value,
-                degree_level: document.getElementById('teacher-degree-level').value,
-                position: document.getElementById('teacher-position').value,
-                academic_rank: document.getElementById('teacher-academic-rank').value,
+                employee_code: document.getElementById('teacher-employee-code').value.trim() || null,
+                name: name,
+                birth_date: document.getElementById('teacher-birth-date').value || null,
+                phone: document.getElementById('teacher-phone').value.trim() || null,
+                email: document.getElementById('teacher-email').value.trim() || null,
+                department_id: parseInt(departmentId),
+                degree_id: parseInt(degreeId),
+                position: document.getElementById('teacher-position').value.trim() || null,
                 base_salary: parseFloat(document.getElementById('teacher-base-salary').value) || 0,
                 hourly_rate: parseFloat(document.getElementById('teacher-hourly-rate').value) || 100000,
-                qualifications: document.getElementById('teacher-qualifications').value
+                qualifications: document.getElementById('teacher-qualifications').value.trim() || null
             };
+
+            console.log('Sending data:', formData);
 
             fetch('/api/teachers', {
                 method: 'POST',
@@ -236,39 +294,45 @@
             })
             .then(response => response.json())
             .then(data => {
+                console.log('Response:', data);
                 if (data.success) {
                     showAlert('Giảng viên đã được thêm thành công!', 'success');
                     document.getElementById('teacher-form').reset();
-                    
-                    // Reset form values to default
                     document.getElementById('teacher-base-salary').value = '5000000';
                     document.getElementById('teacher-hourly-rate').value = '100000';
-                    
-                    // Refresh the teachers list
                     refreshTeachersList();
                 } else {
                     showAlert('Lỗi: ' + data.message, 'error');
                 }
             })
             .catch(error => {
+                console.error('Error:', error);
                 showAlert('Có lỗi xảy ra: ' + error.message, 'error');
             })
             .finally(() => {
-                isSubmitting = false;
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-plus"></i> Thêm giảng viên';
+                resetSubmitButton();
             });
         });
+        
+        function resetSubmitButton() {
+            isSubmitting = false;
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-plus"></i> Thêm giảng viên';
+        }
 
-        // Refresh teachers list
         function refreshTeachersList() {
-            fetch('/api/teachers/list')
+            const departmentId = document.getElementById('filter-department').value;
+            let url = '/api/teachers/list';
+            if (departmentId) {
+                url += `?department_id=${departmentId}`;
+            }
+            
+            fetch(url)
             .then(response => response.json())
-            .then(data => {
+            .then data => {
                 if (data.success) {
                     updateTeachersTable(data.teachers);
-                } else {
-                    console.error('Error refreshing teachers list:', data.message);
                 }
             })
             .catch(error => {
@@ -276,7 +340,6 @@
             });
         }
 
-        // Update teachers table
         function updateTeachersTable(teachers) {
             const tbody = document.getElementById('teachers-tbody');
             tbody.innerHTML = '';
@@ -285,15 +348,14 @@
                 const row = document.createElement('tr');
                 row.setAttribute('data-teacher-id', teacher.id);
                 row.innerHTML = `
-                    <td>${teacher.id}</td>
-                    <td>${teacher.name}</td>
                     <td>${teacher.employee_code || '-'}</td>
-                    <td>${teacher.department}</td>
-                    <td>${teacher.degree_level_display}</td>
-                    <td>${teacher.teacher_coefficient.toFixed(2)}</td>
-                    <td>${teacher.hourly_rate.toLocaleString()} VND</td>
-                    <td>${teacher.email || '-'}</td>
+                    <td><strong>${teacher.name}</strong></td>
+                    <td>${teacher.age || '-'}</td>
+                    <td>${teacher.department_abbreviation}</td>
+                    <td><span class="badge badge-info">${teacher.degree_abbreviation}</span></td>
+                    <td><strong>${teacher.effective_teacher_coefficient.toFixed(1)}</strong></td>
                     <td>${teacher.phone || '-'}</td>
+                    <td>${teacher.email || '-'}</td>
                     <td>
                         <span class="badge badge-${teacher.is_active ? 'success' : 'secondary'}">
                             ${teacher.is_active ? 'Hoạt động' : 'Ngưng'}
@@ -319,14 +381,14 @@
                 if (data.success) {
                     const teacher = data.teacher;
                     document.getElementById('edit-teacher-id').value = teacher.id;
-                    document.getElementById('edit-teacher-name').value = teacher.name;
-                    document.getElementById('edit-teacher-department').value = teacher.department;
                     document.getElementById('edit-teacher-employee-code').value = teacher.employee_code || '';
+                    document.getElementById('edit-teacher-name').value = teacher.name;
+                    document.getElementById('edit-teacher-birth-date').value = teacher.birth_date || '';
+                    document.getElementById('edit-teacher-phone').value = teacher.phone || '';
                     document.getElementById('edit-teacher-email').value = teacher.email || '';
-                    document.getElementById('edit-teacher-degree-level').value = teacher.degree_level;
+                    document.getElementById('edit-teacher-department').value = teacher.department_id;
+                    document.getElementById('edit-teacher-degree').value = teacher.degree_id;
                     document.getElementById('edit-teacher-hourly-rate').value = teacher.hourly_rate;
-                    document.getElementById('edit-teacher-base-salary').value = teacher.base_salary;
-                    document.getElementById('edit-teacher-qualifications').value = teacher.qualifications || '';
                     
                     document.getElementById('edit-teacher-modal').style.display = 'block';
                 } else {
@@ -348,14 +410,14 @@
             
             const id = document.getElementById('edit-teacher-id').value;
             const formData = {
-                name: document.getElementById('edit-teacher-name').value,
-                department: document.getElementById('edit-teacher-department').value,
                 employee_code: document.getElementById('edit-teacher-employee-code').value,
+                name: document.getElementById('edit-teacher-name').value,
+                birth_date: document.getElementById('edit-teacher-birth-date').value,
+                phone: document.getElementById('edit-teacher-phone').value,
                 email: document.getElementById('edit-teacher-email').value,
-                degree_level: document.getElementById('edit-teacher-degree-level').value,
-                hourly_rate: parseFloat(document.getElementById('edit-teacher-hourly-rate').value),
-                base_salary: parseFloat(document.getElementById('edit-teacher-base-salary').value),
-                qualifications: document.getElementById('edit-teacher-qualifications').value
+                department_id: document.getElementById('edit-teacher-department').value,
+                degree_id: document.getElementById('edit-teacher-degree').value,
+                hourly_rate: parseFloat(document.getElementById('edit-teacher-hourly-rate').value)
             };
 
             fetch(`/api/teachers/${id}`, {

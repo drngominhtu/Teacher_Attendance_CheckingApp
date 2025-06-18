@@ -1,0 +1,622 @@
+{% extends "base.html" %}
+
+{% block title %}Quản lý lớp học phần{% endblock %}
+{% block page_title %}Quản lý lớp học phần{% endblock %}
+{% block breadcrumb %}Trang chủ / Quản lý lớp học phần{% endblock %}
+
+{% block content %}
+<!-- Form tạo lớp học phần -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3><i class="fas fa-plus-circle"></i> Tạo lớp học phần mới</h3>
+    </div>
+    <div class="card-body">
+        <form id="class-section-form">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="class-code">Mã lớp: <span class="text-danger">*</span></label>
+                        <input type="text" id="class-code" name="code" class="form-control" required 
+                               placeholder="VD: IT101.01" maxlength="20">
+                        <small class="form-text text-muted">Mã lớp phải duy nhất</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="class-name">Tên lớp: <span class="text-danger">*</span></label>
+                        <input type="text" id="class-name" name="name" class="form-control" required 
+                               placeholder="VD: Lập trình Python - Lớp 01" maxlength="100">
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="class-subject">Học phần: <span class="text-danger">*</span></label>
+                        <select id="class-subject" name="subject_id" class="form-control" required>
+                            <option value="">-- Chọn học phần --</option>
+                            {% for subject in subjects %}
+                            <option value="{{ subject.id }}" data-credits="{{ subject.credits }}">
+                                {{ subject.name }} ({{ subject.credits }} TC)
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="class-semester">Kỳ học: <span class="text-danger">*</span></label>
+                        <select id="class-semester" name="semester_id" class="form-control" required>
+                            <option value="">-- Chọn kỳ học --</option>
+                            {% for semester in semesters %}
+                            <option value="{{ semester.id }}" {% if semester.is_current %}selected{% endif %}>
+                                {{ semester.name }} - {{ semester.year }}
+                                {% if semester.is_current %}<span class="text-success">(Hiện tại)</span>{% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="class-teacher">Giảng viên phụ trách:</label>
+                        <select id="class-teacher" name="teacher_id" class="form-control">
+                            <option value="">-- Chưa phân công --</option>
+                            {% for teacher in teachers %}
+                            <option value="{{ teacher.id }}" data-department="{{ teacher.department_name }}">
+                                {{ teacher.name }} ({{ teacher.department_abbreviation }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">Có thể phân công sau</small>
+                    </div>
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label for="class-student-count">SV hiện tại:</label>
+                                <input type="number" id="class-student-count" name="student_count" 
+                                       class="form-control" min="0" max="200" value="0">
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label for="class-max-students">SV tối đa:</label>
+                                <input type="number" id="class-max-students" name="max_students" 
+                                       class="form-control" min="1" max="200" value="50">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="class-classroom">Phòng học:</label>
+                        <input type="text" id="class-classroom" name="classroom" class="form-control" 
+                               placeholder="VD: A101, Lab1" maxlength="50">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="class-schedule">Lịch học:</label>
+                        <input type="text" id="class-schedule" name="schedule_info" class="form-control" 
+                               placeholder="VD: Thứ 2, 7:30-9:30" maxlength="100">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="class-notes">Ghi chú:</label>
+                <textarea id="class-notes" name="notes" class="form-control" rows="3" 
+                          placeholder="Ghi chú về lớp học phần..." maxlength="500"></textarea>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-success" id="submit-btn">
+                    <i class="fas fa-plus"></i> Tạo lớp học phần
+                </button>
+                <button type="reset" class="btn btn-secondary ml-2">
+                    <i class="fas fa-undo"></i> Làm mới
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Danh sách lớp học phần -->
+<div class="card mt-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3><i class="fas fa-list"></i> Danh sách lớp học phần</h3>
+        <div class="header-actions">
+            <button class="btn btn-outline-info btn-sm" onclick="refreshClassSectionsList()">
+                <i class="fas fa-sync-alt"></i> Làm mới
+            </button>
+            <button class="btn btn-outline-secondary btn-sm ml-2" onclick="exportClassSections()">
+                <i class="fas fa-download"></i> Xuất Excel
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <!-- Bộ lọc -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <select id="filter-semester" class="form-control form-control-sm">
+                    <option value="">Tất cả kỳ học</option>
+                    {% for semester in semesters %}
+                    <option value="{{ semester.id }}" {% if semester.is_current %}selected{% endif %}>
+                        {{ semester.name }} - {{ semester.year }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select id="filter-subject" class="form-control form-control-sm">
+                    <option value="">Tất cả học phần</option>
+                    {% for subject in subjects %}
+                    <option value="{{ subject.id }}">{{ subject.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select id="filter-teacher" class="form-control form-control-sm">
+                    <option value="">Tất cả giảng viên</option>
+                    <option value="unassigned">Chưa phân công</option>
+                    {% for teacher in teachers %}
+                    <option value="{{ teacher.id }}">{{ teacher.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <input type="text" id="search-input" class="form-control form-control-sm" 
+                       placeholder="Tìm kiếm mã lớp, tên lớp...">
+            </div>
+        </div>
+        
+        <!-- Bảng dữ liệu -->
+        <div class="table-responsive">
+            <table class="table table-striped table-hover" id="class-sections-table">
+                <thead class="thead-light">
+                    <tr>
+                        <th width="10%">Mã lớp</th>
+                        <th width="20%">Tên lớp</th>
+                        <th width="15%">Học phần</th>
+                        <th width="12%">Kỳ học</th>
+                        <th width="15%">Giảng viên</th>
+                        <th width="8%">SV</th>
+                        <th width="8%">Phòng</th>
+                        <th width="8%">Trạng thái</th>
+                        <th width="12%">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="class-sections-tbody">
+                    {% for class_section in class_sections %}
+                    <tr data-class-section-id="{{ class_section.id }}">
+                        <td>
+                            <span class="badge badge-primary">{{ class_section.code }}</span>
+                        </td>
+                        <td>
+                            <strong>{{ class_section.name }}</strong>
+                            {% if class_section.notes %}
+                            <br><small class="text-muted">{{ class_section.notes[:50] }}...</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if class_section.subject %}
+                                {{ class_section.subject.name }}
+                                <br><small class="text-muted">{{ class_section.subject.credits }} TC</small>
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if class_section.semester %}
+                                {{ class_section.semester.name }}
+                                <br><small class="text-muted">{{ class_section.semester.year }}</small>
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if class_section.teacher %}
+                                {{ class_section.teacher.name }}
+                                <br><small class="text-muted">{{ class_section.teacher.department_abbreviation }}</small>
+                            {% else %}
+                                <span class="text-warning">Chưa phân công</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge badge-{{ 'success' if class_section.student_count >= class_section.max_students * 0.8 else 'warning' if class_section.student_count > 0 else 'light' }}">
+                                {{ class_section.student_count }}/{{ class_section.max_students }}
+                            </span>
+                        </td>
+                        <td>{{ class_section.classroom or '-' }}</td>
+                        <td>
+                            <span class="badge badge-{{ 'success' if class_section.status == 'active' else 'secondary' }}">
+                                {{ 'Đang học' if class_section.status == 'active' else 'Kế hoạch' }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button class="btn btn-outline-info" onclick="viewClassSection({{ class_section.id }})" 
+                                        title="Xem chi tiết">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-outline-warning" onclick="editClassSection({{ class_section.id }})" 
+                                        title="Chỉnh sửa">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-outline-danger" onclick="deleteClassSection({{ class_section.id }})" 
+                                        title="Xóa">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="9" class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-2x mb-2"></i>
+                            <br>Chưa có lớp học phần nào
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        <nav aria-label="Class sections pagination" class="mt-3">
+            <ul class="pagination pagination-sm justify-content-center" id="pagination">
+                <!-- Pagination sẽ được tạo bằng JavaScript -->
+            </ul>
+        </nav>
+    </div>
+</div>
+
+<!-- Modal xem chi tiết -->
+<div class="modal fade" id="viewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Chi tiết lớp học phần</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="viewModalBody">
+                <!-- Nội dung sẽ được load bằng JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let isSubmitting = false;
+let currentPage = 1;
+const itemsPerPage = 10;
+
+// DOM Ready
+document.addEventListener('DOMContentLoaded', function() {
+    initializeEventListeners();
+    applyFilters();
+});
+
+function initializeEventListeners() {
+    // Form submission
+    document.getElementById('class-section-form').addEventListener('submit', handleFormSubmit);
+    
+    // Filters
+    document.getElementById('filter-semester').addEventListener('change', applyFilters);
+    document.getElementById('filter-subject').addEventListener('change', applyFilters);
+    document.getElementById('filter-teacher').addEventListener('change', applyFilters);
+    document.getElementById('search-input').addEventListener('input', debounce(applyFilters, 300));
+    
+    // Form validation
+    document.getElementById('class-student-count').addEventListener('input', validateStudentCount);
+    document.getElementById('class-max-students').addEventListener('input', validateStudentCount);
+}
+
+function handleFormSubmit(e) {
+    e.preventDefault();
+    
+    if (isSubmitting) return;
+    
+    if (!validateForm()) return;
+    
+    isSubmitting = true;
+    updateSubmitButton(true);
+    
+    const formData = collectFormData();
+    
+    fetch('/api/class-sections', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(handleApiResponse)
+    .catch(handleApiError)
+    .finally(() => {
+        isSubmitting = false;
+        updateSubmitButton(false);
+    });
+}
+
+function collectFormData() {
+    return {
+        code: document.getElementById('class-code').value.trim(),
+        name: document.getElementById('class-name').value.trim(),
+        subject_id: parseInt(document.getElementById('class-subject').value),
+        semester_id: parseInt(document.getElementById('class-semester').value),
+        teacher_id: document.getElementById('class-teacher').value || null,
+        student_count: parseInt(document.getElementById('class-student-count').value) || 0,
+        max_students: parseInt(document.getElementById('class-max-students').value) || 50,
+        classroom: document.getElementById('class-classroom').value.trim(),
+        schedule_info: document.getElementById('class-schedule').value.trim(),
+        notes: document.getElementById('class-notes').value.trim()
+    };
+}
+
+function validateForm() {
+    const code = document.getElementById('class-code').value.trim();
+    const name = document.getElementById('class-name').value.trim();
+    const subjectId = document.getElementById('class-subject').value;
+    const semesterId = document.getElementById('class-semester').value;
+    
+    if (!code) {
+        showAlert('Vui lòng nhập mã lớp', 'error');
+        return false;
+    }
+    
+    if (!name) {
+        showAlert('Vui lòng nhập tên lớp', 'error');
+        return false;
+    }
+    
+    if (!subjectId) {
+        showAlert('Vui lòng chọn học phần', 'error');
+        return false;
+    }
+    
+    if (!semesterId) {
+        showAlert('Vui lòng chọn kỳ học', 'error');
+        return false;
+    }
+    
+    return true;
+}
+
+function validateStudentCount() {
+    const current = parseInt(document.getElementById('class-student-count').value) || 0;
+    const max = parseInt(document.getElementById('class-max-students').value) || 50;
+    
+    if (current > max) {
+        document.getElementById('class-student-count').value = max;
+        showAlert('Số sinh viên hiện tại không thể lớn hơn số tối đa', 'warning');
+    }
+}
+
+function updateSubmitButton(loading) {
+    const btn = document.getElementById('submit-btn');
+    if (loading) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang tạo...';
+    } else {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-plus"></i> Tạo lớp học phần';
+    }
+}
+
+function handleApiResponse(data) {
+    if (data.success) {
+        showAlert('Lớp học phần đã được tạo thành công!', 'success');
+        document.getElementById('class-section-form').reset();
+        document.getElementById('class-max-students').value = '50';
+        
+        // Reload the page to show new data
+        setTimeout(() => {
+            window.location.reload();
+        }, 1000);
+    } else {
+        showAlert('Lỗi: ' + data.message, 'error');
+    }
+}
+
+function handleApiError(error) {
+    console.error('API Error:', error);
+    showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+}
+
+function applyFilters() {
+    const semester = document.getElementById('filter-semester').value;
+    const subject = document.getElementById('filter-subject').value;
+    const teacher = document.getElementById('filter-teacher').value;
+    const search = document.getElementById('search-input').value.toLowerCase();
+    
+    const rows = document.querySelectorAll('#class-sections-tbody tr[data-class-section-id]');
+    let visibleCount = 0;
+    
+    rows.forEach(row => {
+        let visible = true;
+        
+        // Filter logic here
+        const semesterId = row.getAttribute('data-semester-id');
+        const subjectId = row.getAttribute('data-subject-id');
+        const teacherId = row.getAttribute('data-teacher-id');
+        const code = row.getAttribute('data-code').toLowerCase();
+        const name = row.getAttribute('data-name').toLowerCase();
+        
+        if (semester && semester !== semesterId) {
+            visible = false;
+        }
+        
+        if (subject && subject !== subjectId) {
+            visible = false;
+        }
+        
+        if (teacher && teacher !== teacherId) {
+            visible = false;
+        }
+        
+        if (search && !(code.includes(search) || name.includes(search))) {
+            visible = false;
+        }
+        
+        row.style.display = visible ? '' : 'none';
+        if (visible) visibleCount++;
+    });
+    
+    updatePagination(visibleCount);
+}
+
+function refreshClassSectionsList() {
+    fetch('/api/class-sections/list')
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateTable(data.class_sections);
+        } else {
+            console.error('Error refreshing list:', data.message);
+        }
+    })
+    .catch(error => console.error('Error refreshing list:', error));
+}
+
+function viewClassSection(id) {
+    // Load và hiển thị chi tiết trong modal
+    console.log('View class section:', id);
+}
+
+function editClassSection(id) {
+    showAlert('Chức năng chỉnh sửa đang được phát triển', 'info');
+}
+
+function deleteClassSection(id) {
+    if (confirm('Bạn có chắc chắn muốn xóa lớp học phần này?')) {
+        fetch('/api/class-sections/' + id, {method: 'DELETE'})
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('Xóa thành công!', 'success');
+                refreshClassSectionsList();
+            } else {
+                showAlert('Lỗi: ' + data.message, 'error');
+            }
+        })
+        .catch(error => showAlert('Có lỗi xảy ra: ' + error.message, 'error'));
+    }
+}
+
+function exportClassSections() {
+    showAlert('Chức năng xuất Excel đang được phát triển', 'info');
+}
+
+function updatePagination(totalItems) {
+    // Pagination logic here
+}
+
+function updateTable(classSections) {
+    const tbody = document.getElementById('class-sections-tbody');
+    tbody.innerHTML = '';
+    
+    if (classSections.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="9" class="text-center text-muted py-4">
+                    <i class="fas fa-inbox fa-2x mb-2"></i>
+                    <br>Chưa có lớp học phần nào
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    classSections.forEach(classSection => {
+        const row = document.createElement('tr');
+        row.setAttribute('data-class-section-id', classSection.id);
+        row.innerHTML = `
+            <td>
+                <span class="badge badge-primary">${classSection.code}</span>
+            </td>
+            <td>
+                <strong>${classSection.name}</strong>
+                ${classSection.notes ? '<br><small class="text-muted">' + classSection.notes.substring(0, 50) + '...</small>' : ''}
+            </td>
+            <td>
+                ${classSection.subject_name || 'N/A'}
+                ${classSection.subject_credits ? '<br><small class="text-muted">' + classSection.subject_credits + ' TC</small>' : ''}
+            </td>
+            <td>
+                ${classSection.semester_name || 'N/A'}
+                ${classSection.semester_year ? '<br><small class="text-muted">' + classSection.semester_year + '</small>' : ''}
+            </td>
+            <td>
+                ${classSection.teacher_name || '<span class="text-warning">Chưa phân công</span>'}
+                ${classSection.teacher_department ? '<br><small class="text-muted">' + classSection.teacher_department + '</small>' : ''}
+            </td>
+            <td>
+                <span class="badge badge-${classSection.student_count >= classSection.max_students * 0.8 ? 'success' : classSection.student_count > 0 ? 'warning' : 'light'}">
+                    ${classSection.student_count}/${classSection.max_students}
+                </span>
+            </td>
+            <td>${classSection.classroom || '-'}</td>
+            <td>
+                <span class="badge badge-${classSection.status === 'active' ? 'success' : 'secondary'}">
+                    ${classSection.status === 'active' ? 'Đang học' : 'Kế hoạch'}
+                </span>
+            </td>
+            <td>
+                <div class="btn-group btn-group-sm" role="group">
+                    <button class="btn btn-outline-info" onclick="viewClassSection(${classSection.id})" title="Xem chi tiết">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn btn-outline-warning" onclick="editClassSection(${classSection.id})" title="Chỉnh sửa">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-outline-danger" onclick="deleteClassSection(${classSection.id})" title="Xóa">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// Utility functions
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : type === 'warning' ? 'warning' : 'info'} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : 'info-circle'}"></i>
+        ${message}
+        <button type="button" class="close" data-dismiss="alert">
+            <span>&times;</span>
+        </button>
+    `;
+    
+    const container = document.querySelector('.content');
+    container.insertBefore(alertDiv, container.firstChild);
+    
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}

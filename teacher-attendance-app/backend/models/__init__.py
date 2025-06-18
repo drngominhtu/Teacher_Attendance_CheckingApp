@@ -1,31 +1,76 @@
 # Import theo thứ tự để tránh circular import
 from .base import BaseModel
-from .teacher import Teacher, EmployeeType, DegreeLevel
-from .subject import Subject
-from .semester import Semester
-from .assignment import Assignment
-from .schedule import Schedule
-from .teaching_assignment import TeachingAssignment
-from .teaching_record import TeachingRecord
-from .salary_calculation import SalaryCalculation
 
-# Import database sau khi định nghĩa models
-from database import db
+# Import models in correct order to avoid circular imports
+models = {}
 
-# Setup relationships đơn giản - sẽ setup trong app context
+# Import base models first (no foreign keys)
+try:
+    from .degree import Degree
+    models['Degree'] = Degree
+    print("✓ Degree model imported")
+except ImportError as e:
+    print(f"✗ Could not import Degree model: {e}")
+
+try:
+    from .Department import Department  
+    models['Department'] = Department
+    print("✓ Department model imported")
+except ImportError as e:
+    print(f"✗ Could not import Department model: {e}")
+
+try:
+    from .semester import Semester
+    models['Semester'] = Semester
+    print("✓ Semester model imported")
+except ImportError as e:
+    print(f"✗ Could not import Semester model: {e}")
+
+# Import models with foreign keys to base models
+try:
+    from .teacher import Teacher, EmployeeType
+    models['Teacher'] = Teacher
+    models['EmployeeType'] = EmployeeType
+    print("✓ Teacher model imported")
+except ImportError as e:
+    print(f"✗ Could not import Teacher model: {e}")
+
+try:
+    from .subject import Subject
+    models['Subject'] = Subject
+    print("✓ Subject model imported")
+except ImportError as e:
+    print(f"✗ Could not import Subject model: {e}")
+
+# Import models with foreign keys to other models
+try:
+    from .class_section import ClassSection
+    models['ClassSection'] = ClassSection
+    print("✓ ClassSection model imported")
+except ImportError as e:
+    print(f"✗ Could not import ClassSection model: {e}")
+
+try:
+    from .teaching_assignment import TeachingAssignment
+    models['TeachingAssignment'] = TeachingAssignment
+    print("✓ TeachingAssignment model imported")
+except ImportError as e:
+    print(f"✗ Could not import TeachingAssignment model: {e}")
+
+# Import optional models
+try:
+    from .assignment import Assignment
+    models['Assignment'] = Assignment
+    print("✓ Assignment model imported")
+except ImportError:
+    print("Assignment model not found (optional)")
+
 def setup_relationships():
-    """Setup relationships between models - được gọi sau khi app khởi tạo"""
-    pass  # Tạm thời để trống để tránh lỗi circular import
+    """Setup any additional relationships after all models are loaded"""
+    pass
 
-__all__ = [
-    'BaseModel',
-    'Teacher', 'EmployeeType', 'DegreeLevel',
-    'Subject',
-    'Semester', 
-    'Assignment',
-    'Schedule',
-    'TeachingAssignment',
-    'TeachingRecord',
-    'SalaryCalculation',
-    'setup_relationships'
-]
+# Export what we have
+__all__ = ['BaseModel', 'setup_relationships'] + list(models.keys())
+
+# Add to globals for direct import
+globals().update(models)

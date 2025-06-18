@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}Thống kê lớp học{% endblock %}
+
+{% block page_title %}Thống kê lớp học{% endblock %}
+
+{% block breadcrumb %}Trang chủ / Quản lý lớp học phần / Thống kê lớp học{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h1 class="text-primary">{{ stats.total_classes or 0 }}</h1>
+                <p class="card-text">Tổng số lớp</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h1 class="text-success">{{ stats.active_classes or 0 }}</h1>
+                <p class="card-text">Đang hoạt động</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h1 class="text-info">{{ stats.total_students or 0 }}</h1>
+                <p class="card-text">Tổng số sinh viên</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h1 class="text-warning">{{ "%.1f"|format(stats.avg_class_size or 0) }}</h1>
+                <p class="card-text">Sĩ số TB/lớp</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Phân bố lớp theo khoa</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="classByDepartmentChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Tình trạng phân công GV</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="assignmentChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadStatistics();
+});
+
+function loadStatistics() {
+    fetch('/api/class-statistics')
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateStatistics(data.statistics);
+            createCharts(data.statistics);
+        } else {
+            console.error('Error loading statistics:', data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error loading statistics:', error);
+    });
+}
+
+function updateStatistics(stats) {
+    document.getElementById('total-classes').textContent = stats.total_classes || 0;
+    document.getElementById('active-classes').textContent = stats.active_classes || 0;
+    document.getElementById('total-students').textContent = stats.total_students || 0;
+    document.getElementById('avg-enrollment').textContent = Math.round(stats.avg_enrollment || 0) + '%';
+    
+    // Update top subjects table
+    const tbody = document.getElementById('top-subjects-tbody');
+    tbody.innerHTML = '';
+    
+    if (stats.top_subjects) {
+        stats.top_subjects.forEach((subject, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td><strong>${subject.name}</strong></td>
+                <td><span class="badge badge-info">${subject.class_count}</span></td>
+                <td>${subject.total_students}</td>
+                <td>${Math.round(subject.avg_enrollment)}%</td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+}
+
+function createCharts(stats) {
+    // Semester distribution chart
+    if (stats.semester_distribution) {
+        const semesterCtx = document.getElementById('semesterChart').getContext('2d');
+        new Chart(semesterCtx, {
+            type: 'bar',
+            data: {
+                labels: stats.semester_distribution.map(s => `${s.name} ${s.year}`),
+                datasets: [{
+                    label: 'Số lớp',
+                    data: stats.semester_distribution.map(s => s.class_count),
+                    backgroundColor: '#36A2EB'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+    
+    // Status distribution chart
+    if (stats.status_distribution) {
+        const statusCtx = document.getElementById('statusChart').getContext('2d');
+        new Chart(statusCtx, {
+            type: 'pie',
+            data: {
+                labels: stats.status_distribution.map(s => s.status.charAt(0).toUpperCase() + s.status.slice(1)),
+                datasets: [{
+                    data: stats.status_distribution.map(s => s.count),
+                    backgroundColor: [
+                        '#28a745',  // success
+                        '#ffc107',  // warning
+                        '#17a2b8',  // info
+                        '#dc3545'   // danger
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+}
+</script>
+{% endblock %}
+                datasets: [{
+                    label: 'Số lớp',
+                    data: stats.semester_distribution.map(s => s.class_count),
+                    backgroundColor: '#36A2EB'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+    
+    // Status distribution chart
+    if (stats.status_distribution) {
+        const statusCtx = document.getElementById('statusChart').getContext('2d');
+        new Chart(statusCtx, {
+            type: 'pie',
+            data: {
+                labels: stats.status_distribution.map(s => s.status.charAt(0).toUpperCase() + s.status.slice(1)),
+                datasets: [{
+                    data: stats.status_distribution.map(s => s.count),
+                    backgroundColor: [
+                        '#28a745',  // success
+                        '#ffc107',  // warning
+                        '#17a2b8',  // info
+                        '#dc3545'   // danger
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

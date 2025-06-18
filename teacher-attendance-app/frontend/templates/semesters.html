@@ -9,14 +9,14 @@
 <body>
     {% extends "base.html" %}
 
-    {% block title %}Quản lý kì học{% endblock %}
-    {% block page_title %}Quản lý kì học{% endblock %}
-    {% block breadcrumb %}Trang chủ / Quản lý kì học{% endblock %}
+    {% block title %}Quản lý kỳ học{% endblock %}
+    {% block page_title %}Quản lý kỳ học{% endblock %}
+    {% block breadcrumb %}Trang chủ / Quản lý kỳ học{% endblock %}
 
     {% block content %}
     <div class="card">
         <div class="card-header">
-            <h3>Thêm kì học mới</h3>
+            <h3>Thêm kỳ học mới</h3>
         </div>
         <div class="card-body">
             <form id="semester-form">
@@ -33,6 +33,22 @@
                     <label for="semester-year">Năm học:</label>
                     <input type="number" id="semester-year" name="year" class="form-control" min="2020" max="2030" value="{{ current_year }}" required>
                 </div>
+                <div class="form-group">
+                    <label for="semester-academic-year">Khóa học:</label>
+                    <input type="text" id="semester-academic-year" name="academic_year" class="form-control" placeholder="VD: 2023-2024" required>
+                </div>
+                <div class="form-group">
+                    <label for="semester-start-date">Ngày bắt đầu:</label>
+                    <input type="date" id="semester-start-date" name="start_date" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="semester-end-date">Ngày kết thúc:</label>
+                    <input type="date" id="semester-end-date" name="end_date" class="form-control" required>
+                </div>
+                <div class="form-group form-check">
+                    <input type="checkbox" id="semester-is-current" name="is_current" class="form-check-input">
+                    <label class="form-check-label" for="semester-is-current">Kì học hiện tại</label>
+                </div>
                 <button type="submit" class="btn btn-success" id="submit-btn">
                     <i class="fas fa-plus"></i> Thêm kì học
                 </button>
@@ -42,7 +58,7 @@
 
     <div class="card">
         <div class="card-header">
-            <h3>Danh sách kì học</h3>
+            <h3>Danh sách kỳ học</h3>
         </div>
         <div class="card-body">
             <table class="table">
@@ -110,7 +126,7 @@
     <script>
     let isSubmitting = false;
 
-    // Handle semester form submission
+    // Handle form submission
     document.getElementById('semester-form').addEventListener('submit', function(e) {
         e.preventDefault();
         
@@ -119,12 +135,18 @@
         
         const submitBtn = document.getElementById('submit-btn');
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang thêm...';
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang tạo...';
         
         const formData = {
             name: document.getElementById('semester-name').value,
-            year: parseInt(document.getElementById('semester-year').value)
+            year: parseInt(document.getElementById('semester-year').value),
+            academic_year: document.getElementById('semester-academic-year').value,
+            start_date: document.getElementById('semester-start-date').value,
+            end_date: document.getElementById('semester-end-date').value,
+            is_current: document.getElementById('semester-is-current').checked
         };
+
+        console.log('Sending semester data:', formData);
 
         fetch('/api/semesters', {
             method: 'POST',
@@ -135,81 +157,37 @@
         })
         .then(response => response.json())
         .then(data => {
+            console.log('Response:', data);
             if (data.success) {
-                showAlert('Kì học đã được thêm thành công!', 'success');
+                showAlert('Kỳ học đã được tạo thành công!', 'success');
                 document.getElementById('semester-form').reset();
                 setTimeout(() => {
                     window.location.reload();
                 }, 1500);
             } else {
                 showAlert('Lỗi: ' + data.message, 'error');
-                isSubmitting = false;
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-plus"></i> Thêm kì học';
             }
         })
         .catch(error => {
+            console.error('Error:', error);
             showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+        })
+        .finally(() => {
             isSubmitting = false;
             submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-plus"></i> Thêm kì học';
+            submitBtn.innerHTML = '<i class="fas fa-plus"></i> Thêm kỳ học';
         });
     });
-
-    // Handle edit semester form submission
-    document.getElementById('edit-semester-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const semesterId = document.getElementById('edit-semester-id').value;
-        const formData = {
-            name: document.getElementById('edit-semester-name').value,
-            year: parseInt(document.getElementById('edit-semester-year').value)
-        };
-
-        fetch(`/api/semesters/${semesterId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(formData)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showAlert('Kì học đã được cập nhật thành công!', 'success');
-                closeEditModal();
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
-            } else {
-                showAlert('Lỗi: ' + data.message, 'error');
-            }
-        })
-        .catch(error => {
-            showAlert('Có lỗi xảy ra: ' + error.message, 'error');
-        });
-    });
-
-    function editSemester(id, name, year) {
-        document.getElementById('edit-semester-id').value = id;
-        document.getElementById('edit-semester-name').value = name;
-        document.getElementById('edit-semester-year').value = year;
-        document.getElementById('edit-modal').style.display = 'block';
-    }
-
-    function closeEditModal() {
-        document.getElementById('edit-modal').style.display = 'none';
-    }
 
     function deleteSemester(id) {
-        if (confirmDelete('Bạn có chắc chắn muốn xóa kì học này?')) {
+        if (confirm('Bạn có chắc chắn muốn xóa kỳ học này?')) {
             fetch(`/api/semesters/${id}`, {
                 method: 'DELETE'
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showAlert('Kì học đã được xóa thành công!', 'success');
+                    showAlert('Kỳ học đã được xóa thành công!', 'success');
                     setTimeout(() => {
                         window.location.reload();
                     }, 1500);
@@ -221,6 +199,23 @@
                 showAlert('Có lỗi xảy ra: ' + error.message, 'error');
             });
         }
+    }
+
+    // Alert function
+    function showAlert(message, type) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="close" data-dismiss="alert">
+                <span>&times;</span>
+            </button>
+        `;
+        document.querySelector('.content').insertBefore(alertDiv, document.querySelector('.content').firstChild);
+        
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 5000);
     }
     </script>
     {% endblock %}

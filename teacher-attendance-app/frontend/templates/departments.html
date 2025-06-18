@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+
+{% block title %}Quản lý khoa{% endblock %}
+
+{% block page_title %}Quản lý khoa{% endblock %}
+
+{% block breadcrumb %}Trang chủ / Quản lý giảng viên / Quản lý khoa{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3>Thêm khoa mới</h3>
+    </div>
+    <div class="card-body">
+        <form id="department-form">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="department-code">Mã khoa: <span class="text-danger">*</span></label>
+                        <input type="text" id="department-code" name="code" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="department-name">Tên khoa: <span class="text-danger">*</span></label>
+                        <input type="text" id="department-name" name="name" class="form-control" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="department-abbreviation">Viết tắt: <span class="text-danger">*</span></label>
+                        <input type="text" id="department-abbreviation" name="abbreviation" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="department-description">Mô tả:</label>
+                        <textarea id="department-description" name="description" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-success" id="submit-btn">
+                <i class="fas fa-plus"></i> Thêm khoa
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Danh sách khoa</h3>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped" id="departments-table">
+                <thead>
+                    <tr>
+                        <th>Mã khoa</th>
+                        <th>Tên khoa</th>
+                        <th>Viết tắt</th>
+                        <th>Mô tả</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for department in departments %}
+                    <tr>
+                        <td><span class="badge badge-info">{{ department.code }}</span></td>
+                        <td><strong>{{ department.name }}</strong></td>
+                        <td>{{ department.abbreviation }}</td>
+                        <td>{{ department.description or '-' }}</td>
+                        <td>
+                            <span class="badge badge-{{ 'success' if department.is_active else 'secondary' }}">
+                                {{ 'Hoạt động' if department.is_active else 'Ngưng' }}
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-warning btn-sm" onclick="editDepartment({{ department.id }})">
+                                <i class="fas fa-edit"></i> Sửa
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteDepartment({{ department.id }})">
+                                <i class="fas fa-trash"></i> Xóa
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center">Chưa có khoa nào</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="edit-department-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; width: 500px;">
+        <h4>Chỉnh sửa khoa</h4>
+        <form id="edit-department-form">
+            <input type="hidden" id="edit-department-id">
+            <div class="form-group">
+                <label for="edit-department-code">Mã khoa:</label>
+                <input type="text" id="edit-department-code" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-department-name">Tên khoa:</label>
+                <input type="text" id="edit-department-name" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-department-abbreviation">Viết tắt:</label>
+                <input type="text" id="edit-department-abbreviation" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-department-description">Mô tả:</label>
+                <textarea id="edit-department-description" class="form-control" rows="3"></textarea>
+            </div>
+            <button type="submit" class="btn btn-success">Cập nhật</button>
+            <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Hủy</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let isSubmitting = false;
+
+    // Handle form submission
+    document.getElementById('department-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (isSubmitting) return;
+        isSubmitting = true;
+        
+        const submitBtn = document.getElementById('submit-btn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang thêm...';
+        
+        const formData = {
+            code: document.getElementById('department-code').value,
+            name: document.getElementById('department-name').value,
+            abbreviation: document.getElementById('department-abbreviation').value,
+            description: document.getElementById('department-description').value
+        };
+
+        fetch('/api/departments', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('Khoa đã được thêm thành công!', 'success');
+                document.getElementById('department-form').reset();
+                refreshDepartmentsList();
+            } else {
+                showAlert('Lỗi: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+        })
+        .finally(() => {
+            isSubmitting = false;
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-plus"></i> Thêm khoa';
+        });
+    });
+
+    function refreshDepartmentsList() {
+        fetch('/api/departments/list')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateDepartmentsTable(data.departments);
+            }
+        })
+        .catch(error => {
+            console.error('Error refreshing departments:', error);
+        });
+    }
+
+    function updateDepartmentsTable(departments) {
+        const tbody = document.querySelector('#departments-table tbody');
+        tbody.innerHTML = '';
+        
+        if (departments.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Chưa có khoa nào</td></tr>';
+            return;
+        }
+        
+        departments.forEach(department => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><span class="badge badge-info">${department.code}</span></td>
+                <td><strong>${department.name}</strong></td>
+                <td>${department.abbreviation}</td>
+                <td>${department.description || '-'}</td>
+                <td>
+                    <span class="badge badge-${department.is_active ? 'success' : 'secondary'}">
+                        ${department.is_active ? 'Hoạt động' : 'Ngưng'}
+                    </span>
+                </td>
+                <td>
+                    <button class="btn btn-warning btn-sm" onclick="editDepartment(${department.id})">
+                        <i class="fas fa-edit"></i> Sửa
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteDepartment(${department.id})">
+                        <i class="fas fa-trash"></i> Xóa
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    function editDepartment(id) {
+        fetch(`/api/departments/${id}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const department = data.department;
+                document.getElementById('edit-department-id').value = department.id;
+                document.getElementById('edit-department-code').value = department.code;
+                document.getElementById('edit-department-name').value = department.name;
+                document.getElementById('edit-department-abbreviation').value = department.abbreviation;
+                document.getElementById('edit-department-description').value = department.description || '';
+                
+                document.getElementById('edit-department-modal').style.display = 'block';
+            } else {
+                showAlert('Lỗi: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+        });
+    }
+
+    function closeEditModal() {
+        document.getElementById('edit-department-modal').style.display = 'none';
+    }
+
+    // Handle edit form submission
+    document.getElementById('edit-department-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const id = document.getElementById('edit-department-id').value;
+        const formData = {
+            code: document.getElementById('edit-department-code').value,
+            name: document.getElementById('edit-department-name').value,
+            abbreviation: document.getElementById('edit-department-abbreviation').value,
+            description: document.getElementById('edit-department-description').value
+        };
+
+        fetch(`/api/departments/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('Khoa đã được cập nhật thành công!', 'success');
+                closeEditModal();
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                showAlert('Lỗi: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+        });
+    });
+
+    function deleteDepartment(id) {
+        if (confirm('Bạn có chắc chắn muốn xóa khoa này?')) {
+            fetch(`/api/departments/${id}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('Khoa đã được xóa thành công!', 'success');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showAlert('Lỗi: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+            });
+        }
+    }
+
+    function showAlert(message, type) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="close" data-dismiss="alert">
+                <span>&times;</span>
+            </button>
+        `;
+        document.querySelector('.content').insertBefore(alertDiv, document.querySelector('.content').firstChild);
+        
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 5000);
+    }
+</script>
+{% endblock %}
+</script>
+{% endblock %}

@@ -14,26 +14,28 @@
             <div class="row">
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label for="assignment-teacher">Giảng viên:</label>
+                        <label for="assignment-teacher">Giảng viên: <span class="text-danger">*</span></label>
                         <select id="assignment-teacher" name="teacher_id" class="form-control" required>
                             <option value="">Chọn giảng viên</option>
                             {% for teacher in teachers %}
                             <option value="{{ teacher.id }}" 
-                                    data-coefficient="{{ teacher.teacher_coefficient }}" 
-                                    data-hourly-rate="{{ teacher.hourly_rate }}">
-                                {{ teacher.name }} - {{ teacher.department }} (Hệ số: {{ teacher.teacher_coefficient }})
+                                    data-coefficient="{{ teacher.effective_teacher_coefficient }}" 
+                                    data-hourly-rate="{{ teacher.hourly_rate }}"
+                                    data-department="{{ teacher.department_name }}">
+                                {{ teacher.name }} - {{ teacher.department_name }} (Hệ số: {{ "%.2f"|format(teacher.effective_teacher_coefficient) }})
                             </option>
                             {% endfor %}
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="assignment-subject">Học phần:</label>
+                        <label for="assignment-subject">Học phần: <span class="text-danger">*</span></label>
                         <select id="assignment-subject" name="subject_id" class="form-control" required>
                             <option value="">Chọn học phần</option>
                             {% for subject in subjects %}
                             <option value="{{ subject.id }}" 
-                                    data-subject-coefficient="{{ subject.subject_coefficient }}">
-                                {{ subject.name }} (Hệ số: {{ subject.subject_coefficient }})
+                                    data-subject-coefficient="{{ subject.subject_coefficient }}"
+                                    data-credits="{{ subject.credits }}">
+                                {{ subject.name }} - {{ subject.department_name }} ({{ subject.credits }} TC, Hệ số: {{ "%.1f"|format(subject.subject_coefficient) }})
                             </option>
                             {% endfor %}
                         </select>
@@ -41,7 +43,7 @@
                     <div class="form-group">
                         <label for="assignment-semester">Kỳ học:</label>
                         <select id="assignment-semester" name="semester_id" class="form-control">
-                            <option value="">Chọn kỳ học</option>
+                            <option value="">Chọn kỳ học (tùy chọn)</option>
                             {% for semester in semesters %}
                             <option value="{{ semester.id }}">{{ semester.name }} - {{ semester.year }}</option>
                             {% endfor %}
@@ -49,17 +51,17 @@
                     </div>
                     <div class="form-group">
                         <label for="assignment-class-code">Mã lớp: <span class="text-danger">*</span></label>
-                        <input type="text" id="assignment-class-code" name="class_code" class="form-control" required>
+                        <input type="text" id="assignment-class-code" name="class_code" class="form-control" required placeholder="Ví dụ: IT101.01">
                     </div>
                     <div class="form-group">
                         <label for="assignment-student-count">Số sinh viên: <span class="text-danger">*</span></label>
-                        <input type="number" id="assignment-student-count" name="class_student_count" class="form-control" min="1" required>
+                        <input type="number" id="assignment-student-count" name="class_student_count" class="form-control" min="1" max="200" value="30" required>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
                         <label for="assignment-planned-hours">Số tiết dự kiến: <span class="text-danger">*</span></label>
-                        <input type="number" id="assignment-planned-hours" name="planned_hours" class="form-control" min="1" required>
+                        <input type="number" id="assignment-planned-hours" name="planned_hours" class="form-control" min="1" max="200" value="45" required>
                     </div>
                     <div class="form-group">
                         <label for="assignment-actual-hours">Số tiết thực tế:</label>
@@ -68,23 +70,27 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="assignment-start-date">Ngày bắt đầu:</label>
+                                <label for="assignment-start-date">Ngày bắt đầu: <span class="text-danger">*</span></label>
                                 <input type="date" id="assignment-start-date" name="start_date" class="form-control" required>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="assignment-end-date">Ngày kết thúc:</label>
+                                <label for="assignment-end-date">Ngày kết thúc: <span class="text-danger">*</span></label>
                                 <input type="date" id="assignment-end-date" name="end_date" class="form-control" required>
                             </div>
                         </div>
                     </div>
+                    <div class="form-group">
+                        <label for="assignment-notes">Ghi chú:</label>
+                        <textarea id="assignment-notes" name="notes" class="form-control" rows="3" placeholder="Ghi chú về phân công..."></textarea>
+                    </div>
                 </div>
             </div>
             
-            <!-- Khung tính toán preview -->
+            <!-- Calculation preview -->
             <div class="alert alert-info" id="calculation-preview" style="display: none;">
-                <h5>Dự tính tính toán:</h5>
+                <h5><i class="fas fa-calculator"></i> Dự tính tính toán:</h5>
                 <div class="row">
                     <div class="col-md-6">
                         <p><strong>Hệ số giáo viên:</strong> <span id="preview-teacher-coeff">-</span></p>
@@ -264,7 +270,8 @@
             planned_hours: parseInt(document.getElementById('assignment-planned-hours').value),
             actual_hours: parseInt(document.getElementById('assignment-actual-hours').value),
             start_date: document.getElementById('assignment-start-date').value,
-            end_date: document.getElementById('assignment-end-date').value
+            end_date: document.getElementById('assignment-end-date').value,
+            notes: document.getElementById('assignment-notes').value
         };
 
         fetch('/api/teaching-assignments', {
@@ -280,6 +287,12 @@
                 showAlert('Phân công giảng dạy đã được tạo thành công!', 'success');
                 document.getElementById('teaching-assignment-form').reset();
                 document.getElementById('calculation-preview').style.display = 'none';
+                
+                // Reset default dates
+                const today = new Date();
+                document.getElementById('assignment-start-date').value = today.toISOString().split('T')[0];
+                const endDate = new Date(today.getTime() + (120 * 24 * 60 * 60 * 1000));
+                document.getElementById('assignment-end-date').value = endDate.toISOString().split('T')[0];
                 
                 // Refresh the list
                 refreshTeachingAssignmentsList();
@@ -348,51 +361,114 @@
         });
     }
 
+    function editAssignment(id) {
+        fetch(`/api/teaching-assignments/${id}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const assignment = data.assignment;
+                showAlert('Chức năng sửa đầy đủ đang được phát triển. Hiện tại chỉ có thể cập nhật số tiết.', 'info');
+            } else {
+                showAlert('Lỗi: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+        });
+    }
+
     function updateHours(id) {
-        // Tìm assignment data từ table
-        const row = event.target.closest('tr');
-        const currentHours = row.cells[5].textContent.split('/')[1]; // actual hours
-        const currentStudents = row.cells[4].textContent; // student count
+        // Tìm assignment data từ table row
+        const row = document.querySelector(`tr[data-assignment-id="${id}"]`);
+        if (!row) {
+            showAlert('Không tìm thấy dữ liệu phân công', 'error');
+            return;
+        }
         
+        // Lấy dữ liệu hiện tại từ table
+        const hoursCells = row.cells[5].textContent.split('/'); // "planned/actual"
+        const currentActualHours = hoursCells[1] || '0';
+        const currentStudents = row.cells[4].textContent;
+        
+        // Điền vào form
         document.getElementById('update-assignment-id').value = id;
-        document.getElementById('update-actual-hours').value = currentHours;
+        document.getElementById('update-actual-hours').value = currentActualHours;
         document.getElementById('update-student-count').value = currentStudents;
+        
+        // Lấy thông tin để tính toán preview
+        window.currentAssignmentData = {
+            id: id,
+            teacherCoeff: parseFloat(row.cells[6].textContent),
+            subjectCoeff: parseFloat(row.cells[7].textContent),
+            hourlyRate: 100000 // Default, should get from teacher data
+        };
+        
+        // Update preview calculation
+        updatePreviewCalculation();
+        
+        // Hiển thị modal
         document.getElementById('update-hours-modal').style.display = 'block';
     }
-
-    function closeUpdateModal() {
-        document.getElementById('update-hours-modal').style.display = 'none';
-    }
-
-    function deleteAssignment(id) {
-        if (confirm('Bạn có chắc chắn muốn xóa phân công này?')) {
-            fetch(`/api/teaching-assignments/${id}`, {
-                method: 'DELETE'
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showAlert('Phân công đã được xóa thành công!', 'success');
-                    refreshTeachingAssignmentsList();
-                } else {
-                    showAlert('Lỗi: ' + data.message, 'error');
-                }
-            })
-            .catch(error => {
-                showAlert('Có lỗi xảy ra: ' + error.message, 'error');
-            });
+    
+    function updatePreviewCalculation() {
+        const actualHours = parseInt(document.getElementById('update-actual-hours').value) || 0;
+        const studentCount = parseInt(document.getElementById('update-student-count').value) || 0;
+        
+        if (window.currentAssignmentData) {
+            const teacherCoeff = window.currentAssignmentData.teacherCoeff;
+            const subjectCoeff = window.currentAssignmentData.subjectCoeff;
+            const hourlyRate = window.currentAssignmentData.hourlyRate;
+            const classCoeff = calculateClassCoefficient(studentCount);
+            
+            const adjustedHours = actualHours * (subjectCoeff + classCoeff);
+            const totalAmount = adjustedHours * teacherCoeff * hourlyRate;
+            
+            document.getElementById('update-calculation-preview').innerHTML = `
+                <h6><i class="fas fa-calculator"></i> Dự tính tính toán mới:</h6>
+                <div class="row">
+                    <div class="col-6">
+                        <p><strong>Hệ số GV:</strong> ${teacherCoeff.toFixed(2)}</p>
+                        <p><strong>Hệ số HP:</strong> ${subjectCoeff.toFixed(2)}</p>
+                        <p><strong>Hệ số lớp:</strong> <span class="badge badge-${classCoeff >= 0 ? 'success' : 'warning'}">${classCoeff.toFixed(2)}</span></p>
+                    </div>
+                    <div class="col-6">
+                        <p><strong>Tiết quy đổi:</strong> ${adjustedHours.toFixed(2)}</p>
+                        <p><strong>Tổng tiền:</strong> <strong class="text-success">${totalAmount.toLocaleString()} VND</strong></p>
+                    </div>
+                </div>
+            `;
         }
     }
+    
+    // Event listeners cho preview update
+    document.getElementById('update-actual-hours').addEventListener('input', updatePreviewCalculation);
+    document.getElementById('update-student-count').addEventListener('input', updatePreviewCalculation);
 
     // Handle update hours form
     document.getElementById('update-hours-form').addEventListener('submit', function(e) {
         e.preventDefault();
         
         const id = document.getElementById('update-assignment-id').value;
+        const actualHours = parseInt(document.getElementById('update-actual-hours').value);
+        const studentCount = parseInt(document.getElementById('update-student-count').value);
+        
+        // Validation
+        if (!actualHours || actualHours < 0) {
+            showAlert('Số tiết thực tế phải lớn hơn 0', 'error');
+            return;
+        }
+        
+        if (!studentCount || studentCount < 1) {
+            showAlert('Số sinh viên phải lớn hơn 0', 'error');
+            return;
+        }
+        
         const formData = {
-            actual_hours: parseInt(document.getElementById('update-actual-hours').value),
-            class_student_count: parseInt(document.getElementById('update-student-count').value)
+            actual_hours: actualHours,
+            class_student_count: studentCount
         };
+
+        console.log('Updating assignment:', id, formData);
 
         fetch(`/api/teaching-assignments/${id}`, {
             method: 'PUT',
@@ -403,8 +479,9 @@
         })
         .then(response => response.json())
         .then(data => {
+            console.log('Update response:', data);
             if (data.success) {
-                showAlert('Cập nhật thành công!', 'success');
+                showAlert('Cập nhật số tiết thành công!', 'success');
                 closeUpdateModal();
                 refreshTeachingAssignmentsList();
             } else {
@@ -412,8 +489,21 @@
             }
         })
         .catch(error => {
+            console.error('Update error:', error);
             showAlert('Có lỗi xảy ra: ' + error.message, 'error');
         });
+    });
+
+    function closeUpdateModal() {
+        document.getElementById('update-hours-modal').style.display = 'none';
+        window.currentAssignmentData = null;
+    }
+
+    // Close modal when clicking outside
+    document.getElementById('update-hours-modal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeUpdateModal();
+        }
     });
 
     // Alert function
@@ -432,5 +522,15 @@
             alertDiv.remove();
         }, 5000);
     }
+
+    // Set default dates
+    document.addEventListener('DOMContentLoaded', function() {
+        const today = new Date();
+        const startDate = today.toISOString().split('T')[0];
+        document.getElementById('assignment-start-date').value = startDate;
+        
+        const endDate = new Date(today.getTime() + (120 * 24 * 60 * 60 * 1000)); // 120 days later
+        document.getElementById('assignment-end-date').value = endDate.toISOString().split('T')[0];
+    });
 </script>
 {% endblock %}
