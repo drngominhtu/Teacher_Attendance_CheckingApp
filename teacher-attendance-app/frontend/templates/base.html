@@ -8,7 +8,6 @@
     <title>{% block title %}Hệ thống chấm công giáo viên{% endblock %}</title>
 </head>
 <body>
-    <!-- Sidebar Navigation -->
     <div class="sidebar">
         <div class="sidebar-header">
             <h1>Hệ thống chấm công</h1>
@@ -18,108 +17,36 @@
             <ul>
                 <li>
                     <a href="{{ url_for('index') }}" {% if request.endpoint == 'index' %}class="active"{% endif %}>
-                        <i class="fas fa-home"></i>
-                        Trang chủ
+                        <i class="fas fa-home"></i> Trang chủ
                     </a>
                 </li>
-                
-                <!-- Nhóm 1: Quản lý giảng viên -->
                 <li class="has-dropdown">
                     <a href="#" class="dropdown-toggle">
-                        <i class="fas fa-users"></i>
-                        Quản lý giảng viên
+                        <i class="fas fa-users"></i> Quản lý giảng viên
                         <i class="fas fa-chevron-down dropdown-icon"></i>
                     </a>
                     <ul class="dropdown-menu">
-                        <li>
-                            <a href="{{ url_for('degrees') }}" {% if request.endpoint == 'degrees' %}class="active"{% endif %}>
-                                <i class="fas fa-graduation-cap"></i>
-                                Quản lý bằng cấp
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ url_for('departments') }}" {% if request.endpoint == 'departments' %}class="active"{% endif %}>
-                                <i class="fas fa-building"></i>
-                                Quản lý khoa
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ url_for('teachers') }}" {% if request.endpoint == 'teachers' %}class="active"{% endif %}>
-                                <i class="fas fa-user-tie"></i>
-                                Quản lý giảng viên
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ url_for('teacher_statistics') }}" {% if request.endpoint == 'teacher_statistics' %}class="active"{% endif %}>
-                                <i class="fas fa-chart-bar"></i>
-                                Thống kê giảng viên
-                            </a>
-                        </li>
+                        <li><a href="{{ url_for('degrees') }}"><i class="fas fa-graduation-cap"></i> Quản lý bằng cấp</a></li>
+                        <li><a href="{{ url_for('departments') }}"><i class="fas fa-building"></i> Quản lý khoa</a></li>
+                        <li><a href="{{ url_for('teachers') }}"><i class="fas fa-user-tie"></i> Quản lý giảng viên</a></li>
+                        <li><a href="{{ url_for('teacher_statistics') }}"><i class="fas fa-chart-bar"></i> Thống kê giảng viên</a></li>
                     </ul>
                 </li>
-                
-                <!-- Nhóm 2: Quản lý lớp học phần -->
                 <li class="has-dropdown">
                     <a href="#" class="dropdown-toggle">
-                        <i class="fas fa-chalkboard-teacher"></i>
-                        Quản lý lớp học phần
+                        <i class="fas fa-chalkboard-teacher"></i> Quản lý học phần
                         <i class="fas fa-chevron-down dropdown-icon"></i>
                     </a>
                     <ul class="dropdown-menu">
-                        <li>
-                            <a href="{{ url_for('subjects') }}" {% if request.endpoint == 'subjects' %}class="active"{% endif %}>
-                                <i class="fas fa-book"></i>
-                                Quản lý học phần
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ url_for('semesters') }}" {% if request.endpoint == 'semesters' %}class="active"{% endif %}>
-                                <i class="fas fa-calendar"></i>
-                                Quản lý kì học
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ url_for('class_sections') }}" {% if request.endpoint == 'class_sections' %}class="active"{% endif %}>
-                                <i class="fas fa-chalkboard"></i>
-                                Quản lý lớp học phần
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ url_for('teaching_assignments') }}" {% if request.endpoint == 'teaching_assignments' %}class="active"{% endif %}>
-                                <i class="fas fa-user-clock"></i>
-                                Phân công giảng viên
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ url_for('class_statistics') }}" {% if request.endpoint == 'class_statistics' %}class="active"{% endif %}>
-                                <i class="fas fa-chart-line"></i>
-                                Thống kê lớp học
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-                
-                <!-- Nhóm 3: Tính tiền dạy -->
-                <li class="has-dropdown">
-                    <a href="#" class="dropdown-toggle">
-                        <i class="fas fa-calculator"></i>
-                        Tính tiền dạy
-                        <i class="fas fa-chevron-down dropdown-icon"></i>
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li>
-                            <a href="#" class="disabled">
-                                <i class="fas fa-money-bill"></i>
-                                Tính lương (Đang phát triển)
-                            </a>
-                        </li>
+                        <li><a href="{{ url_for('subjects') }}"><i class="fas fa-book"></i> Quản lý học phần</a></li>
+                        <li><a href="{{ url_for('semesters') }}"><i class="fas fa-calendar"></i> Quản lý kỳ học</a></li>
+                        <li><a href="{{ url_for('teaching_assignments') }}"><i class="fas fa-user-clock"></i> Phân công giảng dạy</a></li>
                     </ul>
                 </li>
             </ul>
         </nav>
     </div>
 
-    <!-- Main Content -->
     <div class="main-content">
         <header class="main-header">
             <h2>{% block page_title %}Trang chủ{% endblock %}</h2>
@@ -128,161 +55,7 @@
 
         <main class="content">
             {% block content %}
-            <!-- Nội dung trang chủ mặc định -->
-            <div class="welcome-stats">
-                <div class="stat-card">
-                    <div class="stat-number">{{ subjects_count or 0 }}</div>
-                    <div class="stat-label">Học phần</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">{{ semesters_count or 0 }}</div>
-                    <div class="stat-label">Kì học</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">{{ teachers_count or 0 }}</div>
-                    <div class="stat-label">Giảng viên</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">{{ departments_count or 0 }}</div>
-                    <div class="stat-label">Khoa</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">{{ class_sections_count or 0 }}</div>
-                    <div class="stat-label">Lớp học phần</div>
-                </div>
-            </div>
-
-            <div class="row mt-4">
-                <div class="col-md-8">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>Chào mừng đến với hệ thống chấm công!</h3>
-                        </div>
-                        <div class="card-body">
-                            <p>Hệ thống quản lý chấm công dành cho giáo viên với các chức năng chính:</p>
-                            
-                            <!-- Nhóm 1: Quản lý giảng viên -->
-                            <div class="feature-group mb-4">
-                                <h5><i class="fas fa-users text-primary"></i> Quản lý giảng viên</h5>
-                                <div class="feature-buttons">
-                                    <a href="{{ url_for('degrees') }}" class="btn btn-outline-primary btn-sm">
-                                        <i class="fas fa-graduation-cap"></i> Bằng cấp
-                                    </a>
-                                    <a href="{{ url_for('departments') }}" class="btn btn-outline-primary btn-sm">
-                                        <i class="fas fa-building"></i> Khoa
-                                    </a>
-                                    <a href="{{ url_for('teachers') }}" class="btn btn-primary btn-sm">
-                                        <i class="fas fa-user-tie"></i> Giảng viên
-                                    </a>
-                                    <a href="{{ url_for('teacher_statistics') }}" class="btn btn-outline-primary btn-sm">
-                                        <i class="fas fa-chart-bar"></i> Thống kê
-                                    </a>
-                                </div>
-                            </div>
-
-                            <!-- Nhóm 2: Quản lý lớp học phần -->
-                            <div class="feature-group mb-4">
-                                <h5><i class="fas fa-chalkboard-teacher text-success"></i> Quản lý lớp học phần</h5>
-                                <div class="feature-buttons">
-                                    <a href="{{ url_for('subjects') }}" class="btn btn-outline-success btn-sm">
-                                        <i class="fas fa-book"></i> Học phần
-                                    </a>
-                                    <a href="{{ url_for('semesters') }}" class="btn btn-outline-success btn-sm">
-                                        <i class="fas fa-calendar"></i> Kỳ học
-                                    </a>
-                                    <a href="{{ url_for('class_sections') }}" class="btn btn-success btn-sm">
-                                        <i class="fas fa-chalkboard"></i> Lớp học phần
-                                    </a>
-                                    <a href="{{ url_for('teaching_assignments') }}" class="btn btn-outline-success btn-sm">
-                                        <i class="fas fa-user-clock"></i> Phân công
-                                    </a>
-                                    <a href="{{ url_for('class_statistics') }}" class="btn btn-outline-success btn-sm">
-                                        <i class="fas fa-chart-line"></i> Thống kê
-                                    </a>
-                                </div>
-                            </div>
-
-                            <!-- Nhóm 3: Tính tiền dạy -->
-                            <div class="feature-group">
-                                <h5><i class="fas fa-calculator text-warning"></i> Tính tiền dạy</h5>
-                                <div class="feature-buttons">
-                                    <button class="btn btn-outline-warning btn-sm" disabled>
-                                        <i class="fas fa-money-bill"></i> Đang phát triển
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="col-md-4">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5>Thống kê nhanh</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <small class="text-muted">Tỷ lệ giảng viên có bằng Thạc sĩ trở lên</small>
-                                <div class="progress mt-1">
-                                    <div class="progress-bar bg-success" style="width: {{ master_degree_rate or 0 }}%">
-                                        {{ "%.0f"|format(master_degree_rate or 0) }}%
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <small class="text-muted">Tỷ lệ lớp đã được phân công giảng viên</small>
-                                <div class="progress mt-1">
-                                    <div class="progress-bar bg-info" style="width: {{ assigned_classes_rate or 0 }}%">
-                                        {{ "%.0f"|format(assigned_classes_rate or 0) }}%
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <small class="text-muted">Tỷ lệ đăng ký lớp trung bình</small>
-                                <div class="progress mt-1">
-                                    <div class="progress-bar bg-warning" style="width: {{ avg_enrollment_rate or 0 }}%">
-                                        {{ "%.0f"|format(avg_enrollment_rate or 0) }}%
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="card mt-3">
-                        <div class="card-header">
-                            <h6>Truy cập nhanh</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="quick-access-grid">
-                                <a href="{{ url_for('degrees') }}" class="quick-access-item">
-                                    <i class="fas fa-graduation-cap"></i>
-                                    <span>Bằng cấp</span>
-                                </a>
-                                <a href="{{ url_for('departments') }}" class="quick-access-item">
-                                    <i class="fas fa-building"></i>
-                                    <span>Khoa</span>
-                                </a>
-                                <a href="{{ url_for('teachers') }}" class="quick-access-item">
-                                    <i class="fas fa-users"></i>
-                                    <span>Giảng viên</span>
-                                </a>
-                                <a href="{{ url_for('subjects') }}" class="quick-access-item">
-                                    <i class="fas fa-book"></i>
-                                    <span>Học phần</span>
-                                </a>
-                                <a href="{{ url_for('class_sections') }}" class="quick-access-item">
-                                    <i class="fas fa-chalkboard"></i>
-                                    <span>Lớp HP</span>
-                                </a>
-                                <a href="{{ url_for('teaching_assignments') }}" class="quick-access-item">
-                                    <i class="fas fa-user-clock"></i>
-                                    <span>Phân công</span>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <!-- Default homepage content -->
             {% endblock %}
         </main>
     </div>

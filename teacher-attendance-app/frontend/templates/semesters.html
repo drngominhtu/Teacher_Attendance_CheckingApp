@@ -20,62 +20,62 @@
         </div>
         <div class="card-body">
             <form id="semester-form">
-                <div class="form-group">
-                    <label for="semester-name">Tên kì học:</label>
-                    <select id="semester-name" name="name" class="form-control" required>
-                        <option value="">Chọn kì học</option>
-                        <option value="Kì 1">Kì 1</option>
-                        <option value="Kì 2">Kì 2</option>
-                        <option value="Kì 3">Kì 3 (Hè)</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="semester-year">Năm học:</label>
-                    <input type="number" id="semester-year" name="year" class="form-control" min="2020" max="2030" value="{{ current_year }}" required>
-                </div>
-                <div class="form-group">
-                    <label for="semester-academic-year">Khóa học:</label>
-                    <input type="text" id="semester-academic-year" name="academic_year" class="form-control" placeholder="VD: 2023-2024" required>
-                </div>
-                <div class="form-group">
-                    <label for="semester-start-date">Ngày bắt đầu:</label>
-                    <input type="date" id="semester-start-date" name="start_date" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="semester-end-date">Ngày kết thúc:</label>
-                    <input type="date" id="semester-end-date" name="end_date" class="form-control" required>
-                </div>
-                <div class="form-group form-check">
-                    <input type="checkbox" id="semester-is-current" name="is_current" class="form-check-input">
-                    <label class="form-check-label" for="semester-is-current">Kì học hiện tại</label>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="semester-name">Tên kỳ học: <span class="text-danger">*</span></label>
+                            <select id="semester-name" name="name" class="form-control" required>
+                                <option value="">Chọn kỳ học</option>
+                                <option value="Kỳ 1">Kỳ 1</option>
+                                <option value="Kỳ 2">Kỳ 2</option>
+                                <option value="Kỳ 3">Kỳ 3 (Hè)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="semester-year">Năm học: <span class="text-danger">*</span></label>
+                            <input type="number" id="semester-year" name="year" class="form-control" min="2020" max="2030" value="{{ current_year }}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="semester-academic-year">Khóa học:</label>
+                            <input type="text" id="semester-academic-year" name="academic_year" class="form-control" placeholder="VD: 2023-2024">
+                        </div>
+                        <div class="form-group form-check">
+                            <input type="checkbox" id="semester-is-current" name="is_current" class="form-check-input">
+                            <label class="form-check-label" for="semester-is-current">Kỳ học hiện tại</label>
+                        </div>
+                    </div>
                 </div>
                 <button type="submit" class="btn btn-success" id="submit-btn">
-                    <i class="fas fa-plus"></i> Thêm kì học
+                    <i class="fas fa-plus"></i> Thêm kỳ học
                 </button>
             </form>
         </div>
     </div>
 
     <div class="card">
-        <div class="card-header">
+        <div class="card-header d-flex justify-content-between align-items-center">
             <h3>Danh sách kỳ học</h3>
+            <button class="btn btn-outline-info btn-sm" onclick="refreshSemestersList()">
+                <i class="fas fa-sync-alt"></i> Làm mới
+            </button>
         </div>
         <div class="card-body">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>STT</th>
-                        <th>Tên kì</th>
-                        <th>Năm học</th>
-                        <th>Ngày tạo</th>
-                        <th>Thao tác</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for semester in semesters %}
-                    <tr>
-                        <td>{{ loop.index }}</td>
-                        <td>{{ semester.name }}</td>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Tên kỳ</th>
+                            <th>Năm học</th>
+                            <th>Khóa học</th>
+                            <th>Trạng thái</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="semesters-tbody">
+                        {% for semester in semesters %}
+                        <tr data-semester-id="{{ semester.id }}">
                         <td>{{ semester.year }}</td>
                         <td>{{ semester.created_at.strftime('%d/%m/%Y') }}</td>
                         <td>

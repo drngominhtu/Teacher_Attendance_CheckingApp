@@ -1,9 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}Thống kê giảng viên{% endblock %}
-
 {% block page_title %}Thống kê giảng viên{% endblock %}
-
 {% block breadcrumb %}Trang chủ / Quản lý giảng viên / Thống kê giảng viên{% endblock %}
 
 {% block content %}
@@ -11,7 +9,7 @@
     <div class="col-md-3">
         <div class="card text-center">
             <div class="card-body">
-                <h1 class="text-primary" id="total-teachers">{{ stats.total_teachers or 0 }}</h1>
+                <h1 class="text-primary">{{ stats.total_teachers or 0 }}</h1>
                 <p class="card-text">Tổng số giảng viên</p>
             </div>
         </div>
@@ -19,7 +17,7 @@
     <div class="col-md-3">
         <div class="card text-center">
             <div class="card-body">
-                <h1 class="text-success" id="active-teachers">{{ stats.active_teachers or 0 }}</h1>
+                <h1 class="text-success">{{ stats.active_teachers or 0 }}</h1>
                 <p class="card-text">Đang hoạt động</p>
             </div>
         </div>
@@ -27,7 +25,7 @@
     <div class="col-md-3">
         <div class="card text-center">
             <div class="card-body">
-                <h1 class="text-info" id="phd-teachers">{{ stats.phd_teachers or 0 }}</h1>
+                <h1 class="text-info">{{ stats.phd_teachers or 0 }}</h1>
                 <p class="card-text">Có bằng Tiến sĩ</p>
             </div>
         </div>
@@ -35,7 +33,7 @@
     <div class="col-md-3">
         <div class="card text-center">
             <div class="card-body">
-                <h1 class="text-warning" id="avg-age">{{ "%.1f"|format(stats.avg_age or 0) }}</h1>
+                <h1 class="text-warning">{{ "%.1f"|format(stats.avg_age or 0) }}</h1>
                 <p class="card-text">Tuổi trung bình</p>
             </div>
         </div>
@@ -65,123 +63,42 @@
     </div>
 </div>
 
-<div class="row mt-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h5>Chi tiết theo khoa</h5>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Khoa</th>
-                                <th>Tổng số GV</th>
-                                <th>Đại học</th>
-                                <th>Thạc sĩ</th>
-                                <th>Tiến sĩ</th>
-                                <th>Tuổi TB</th>
-                            </tr>
-                        </thead>
-                        <tbody id="department-stats-tbody">
-                            {% for dept_stat in stats.department_stats %}
-                            <tr>
-                                <td>{{ dept_stat.name }}</td>
-                                <td>{{ dept_stat.total }}</td>
-                                <td>{{ dept_stat.bachelor }}</td>
-                                <td>{{ dept_stat.master }}</td>
-                                <td>{{ dept_stat.phd }}</td>
-                                <td>{{ "%.1f"|format(dept_stat.avg_age) }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/teacher_statistics.js') }}"></script>
+
+<div class="col-12 mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h5>Chi tiết theo khoa</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Khoa</th>
+                            <th>Tổng số GV</th>
+                            <th>Đại học</th>
+                            <th>Thạc sĩ</th>
+                            <th>Tiến sĩ</th>
+                            <th>Tuổi TB</th>
+                        </tr>
+                    </thead>
+                    <tbody id="department-stats-tbody">
+                        {% for dept_stat in stats.department_stats %}
+                        <tr>
+                            <td>{{ dept_stat.name }}</td>
+                            <td>{{ dept_stat.total }}</td>
+                            <td>{{ dept_stat.bachelor }}</td>
+                            <td>{{ dept_stat.master }}</td>
+                            <td>{{ dept_stat.phd }}</td>
+                            <td>{{ "%.1f"|format(dept_stat.avg_age) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-const departmentData = {{ stats.department_chart_data | tojson }};
-if (departmentData && departmentData.labels) {
-    const departmentCtx = document.getElementById('departmentChart').getContext('2d');
-    new Chart(departmentCtx, {
-        type: 'pie',
-        data: {
-            labels: departmentData.labels,
-            datasets: [{
-                data: departmentData.data,
-                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF']
-            }]
-        }
-    });
-}
-
-const degreeData = {{ stats.degree_chart_data | tojson }};
-if (degreeData && degreeData.labels) {
-    const degreeCtx = document.getElementById('degreeChart').getContext('2d');
-    new Chart(degreeCtx, {
-        type: 'doughnut',
-        data: {
-            labels: degreeData.labels,
-            datasets: [{
-                data: degreeData.data,
-                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0']
-            }]
-        }
-    });
-}
-</script>
-{% endblock %}
-        new Chart(degreeCtx, {
-            type: 'doughnut',
-            data: {
-                labels: stats.degree_distribution.map(d => d.name),
-                datasets: [{
-                    data: stats.degree_distribution.map(d => d.count),
-                    backgroundColor: [
-                        '#FF6384',
-                        '#36A2EB',
-                        '#FFCE56',
-                        '#4BC0C0',
-                        '#9966FF'
-                    ]
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false
-            }
-        });
-    }
-    
-    // Department distribution chart
-    if (stats.department_distribution) {
-        const deptCtx = document.getElementById('departmentChart').getContext('2d');
-        new Chart(deptCtx, {
-            type: 'bar',
-            data: {
-                labels: stats.department_distribution.map(d => d.abbreviation),
-                datasets: [{
-                    label: 'Số giảng viên',
-                    data: stats.department_distribution.map(d => d.count),
-                    backgroundColor: '#36A2EB'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
-        });
-    }
-}
-</script>
 {% endblock %}

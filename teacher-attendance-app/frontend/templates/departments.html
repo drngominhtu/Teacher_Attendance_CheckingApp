@@ -72,10 +72,10 @@
                             </span>
                         </td>
                         <td>
-                            <button class="btn btn-warning btn-sm" onclick="editDepartment({{ department.id }})">
+                            <button class="btn btn-warning btn-sm" onclick="editDepartment('{{ department.id }}')">
                                 <i class="fas fa-edit"></i> Sửa
                             </button>
-                            <button class="btn btn-danger btn-sm" onclick="deleteDepartment({{ department.id }})">
+                            <button class="btn btn-danger btn-sm" onclick="deleteDepartment('{{ department.id }}')">
                                 <i class="fas fa-trash"></i> Xóa
                             </button>
                         </td>
@@ -316,5 +316,4 @@
     }
 </script>
 {% endblock %}
-</script>
-{% endblock %}
+
