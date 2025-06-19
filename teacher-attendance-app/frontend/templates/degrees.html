@@ -1,9 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}Quản lý bằng cấp{% endblock %}
-
 {% block page_title %}Quản lý bằng cấp{% endblock %}
-
 {% block breadcrumb %}Trang chủ / Quản lý giảng viên / Quản lý bằng cấp{% endblock %}
 
 {% block content %}
@@ -17,21 +15,22 @@
                 <div class="col-md-6">
                     <div class="form-group">
                         <label for="degree-name">Tên bằng cấp: <span class="text-danger">*</span></label>
-                        <input type="text" id="degree-name" name="name" class="form-control" required>
+                        <input type="text" id="degree-name" name="name" class="form-control" required placeholder="VD: Thạc sĩ">
                     </div>
                     <div class="form-group">
                         <label for="degree-abbreviation">Viết tắt: <span class="text-danger">*</span></label>
-                        <input type="text" id="degree-abbreviation" name="abbreviation" class="form-control" required>
+                        <input type="text" id="degree-abbreviation" name="abbreviation" class="form-control" required placeholder="VD: ThS">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
                         <label for="degree-coefficient">Hệ số: <span class="text-danger">*</span></label>
-                        <input type="number" id="degree-coefficient" name="coefficient" class="form-control" step="0.1" min="1.0" max="3.0" required>
+                        <input type="number" id="degree-coefficient" name="coefficient" class="form-control" step="0.1" min="1.0" max="3.0" value="1.0" required>
+                        <small class="text-muted">Hệ số từ 1.0 đến 3.0</small>
                     </div>
                     <div class="form-group">
                         <label for="degree-description">Mô tả:</label>
-                        <textarea id="degree-description" name="description" class="form-control" rows="3"></textarea>
+                        <textarea id="degree-description" name="description" class="form-control" rows="3" placeholder="Mô tả về bằng cấp..."></textarea>
                     </div>
                 </div>
             </div>
@@ -43,12 +42,15 @@
 </div>
 
 <div class="card">
-    <div class="card-header">
+    <div class="card-header d-flex justify-content-between align-items-center">
         <h3>Danh sách bằng cấp</h3>
+        <button class="btn btn-outline-info btn-sm" onclick="refreshDegreesList()">
+            <i class="fas fa-sync-alt"></i> Làm mới
+        </button>
     </div>
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-striped">
+            <table class="table table-striped" id="degrees-table">
                 <thead>
                     <tr>
                         <th>Tên bằng cấp</th>
@@ -58,15 +60,18 @@
                         <th>Thao tác</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="degrees-tbody">
                     {% for degree in degrees %}
-                    <tr>
+                    <tr data-degree-id="{{ degree.id }}">
                         <td><strong>{{ degree.name }}</strong></td>
                         <td><span class="badge badge-info">{{ degree.abbreviation }}</span></td>
-                        <td><span class="badge badge-success">{{ degree.coefficient }}</span></td>
+                        <td><span class="badge badge-success">{{ "%.1f"|format(degree.coefficient) }}</span></td>
                         <td>{{ degree.description or '-' }}</td>
                         <td>
-                            <button class="btn btn-danger btn-sm" onclick="deleteDegree({{ degree.id }})">
+                            <button class="btn btn-warning btn-sm" onclick="editDegree('{{ degree.id }}')">
+                                <i class="fas fa-edit"></i> Sửa
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteDegree('{{ degree.id }}')">
                                 <i class="fas fa-trash"></i> Xóa
                             </button>
                         </td>
@@ -82,9 +87,38 @@
     </div>
 </div>
 
+<!-- Edit Modal -->
+<div id="edit-degree-modal" class="custom-modal">
+    <div class="custom-modal-content">
+        <h4>Chỉnh sửa bằng cấp</h4>
+        <form id="edit-degree-form">
+            <input type="hidden" id="edit-degree-id">
+            <div class="form-group">
+                <label for="edit-degree-name">Tên bằng cấp:</label>
+                <input type="text" id="edit-degree-name" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-degree-abbreviation">Viết tắt:</label>
+                <input type="text" id="edit-degree-abbreviation" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-degree-coefficient">Hệ số:</label>
+                <input type="number" id="edit-degree-coefficient" class="form-control" step="0.1" min="1.0" max="3.0" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-degree-description">Mô tả:</label>
+                <textarea id="edit-degree-description" class="form-control" rows="3"></textarea>
+            </div>
+            <button type="submit" class="btn btn-success">Cập nhật</button>
+            <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Hủy</button>
+        </form>
+    </div>
+</div>
+
 <script>
 let isSubmitting = false;
 
+// Handle form submission
 document.getElementById('degree-form').addEventListener('submit', function(e) {
     e.preventDefault();
     
@@ -114,9 +148,8 @@ document.getElementById('degree-form').addEventListener('submit', function(e) {
         if (data.success) {
             showAlert('Bằng cấp đã được thêm thành công!', 'success');
             document.getElementById('degree-form').reset();
-            setTimeout(() => {
-                window.location.reload();
-            }, 1500);
+            document.getElementById('degree-coefficient').value = '1.0';
+            refreshDegreesList();
         } else {
             showAlert('Lỗi: ' + data.message, 'error');
         }
@@ -131,24 +164,134 @@ document.getElementById('degree-form').addEventListener('submit', function(e) {
     });
 });
 
+function refreshDegreesList() {
+    fetch('/api/degrees/list')
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateDegreesTable(data.degrees);
+        }
+    })
+    .catch(error => {
+        console.error('Error refreshing degrees:', error);
+    });
+}
+
+function updateDegreesTable(degrees) {
+    const tbody = document.getElementById('degrees-tbody');
+    tbody.innerHTML = '';
+    
+    if (degrees.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center">Chưa có bằng cấp nào</td></tr>';
+        return;
+    }
+    
+    degrees.forEach(degree => {
+        const row = document.createElement('tr');
+        row.setAttribute('data-degree-id', degree.id);
+        row.innerHTML = `
+            <td><strong>${degree.name}</strong></td>
+            <td><span class="badge badge-info">${degree.abbreviation}</span></td>
+            <td><span class="badge badge-success">${degree.coefficient.toFixed(1)}</span></td>
+            <td>${degree.description || '-'}</td>
+            <td>
+                <button class="btn btn-warning btn-sm" onclick="editDegree(${degree.id})">
+                    <i class="fas fa-edit"></i> Sửa
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="deleteDegree(${degree.id})">
+                    <i class="fas fa-trash"></i> Xóa
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function editDegree(id) {
+    fetch(`/api/degrees/${id}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const degree = data.degree;
+            document.getElementById('edit-degree-id').value = degree.id;
+            document.getElementById('edit-degree-name').value = degree.name;
+            document.getElementById('edit-degree-abbreviation').value = degree.abbreviation;
+            document.getElementById('edit-degree-coefficient').value = degree.coefficient;
+            document.getElementById('edit-degree-description').value = degree.description || '';
+            
+            document.getElementById('edit-degree-modal').style.display = 'block';
+        } else {
+            showAlert('Lỗi: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+    });
+}
+
+function closeEditModal() {
+    document.getElementById('edit-degree-modal').style.display = 'none';
+}
+
+// Handle edit form submission
+document.getElementById('edit-degree-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const id = document.getElementById('edit-degree-id').value;
+    const formData = {
+        name: document.getElementById('edit-degree-name').value,
+        abbreviation: document.getElementById('edit-degree-abbreviation').value,
+        coefficient: parseFloat(document.getElementById('edit-degree-coefficient').value),
+        description: document.getElementById('edit-degree-description').value
+    };
+
+    fetch(`/api/degrees/${id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('Bằng cấp đã được cập nhật thành công!', 'success');
+            closeEditModal();
+            refreshDegreesList();
+        } else {
+            showAlert('Lỗi: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+    });
+});
+
 function deleteDegree(id) {
-    if (confirm('Bạn có chắc chắn muốn xóa bằng cấp này?')) {
+    if (confirm('Bạn có chắc chắn muốn xóa bằng cấp này?\n\nLưu ý: Không thể xóa nếu có giảng viên đang sử dụng bằng cấp này.')) {
         fetch(`/api/degrees/${id}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 showAlert('Bằng cấp đã được xóa thành công!', 'success');
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
+                refreshDegreesList();
             } else {
                 showAlert('Lỗi: ' + data.message, 'error');
             }
         })
         .catch(error => {
-            showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+            console.error('Delete degree error:', error);
+            showAlert('Có lỗi xảy ra khi xóa bằng cấp. Vui lòng thử lại.', 'error');
         });
     }
 }
@@ -170,4 +313,189 @@ function showAlert(message, type) {
 }
 </script>
 {% endblock %}
-                
+<script>
+// Add keyboard event listener for ESC key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' || e.keyCode === 27) {
+        const modal = document.getElementById('editDegreeModal');
+        if (modal && modal.style.display === 'block') {
+            closeEditModal();
+        }
+    }
+});
+
+// Prevent modal from closing when clicking inside content
+document.addEventListener('DOMContentLoaded', function() {
+    const modalContent = document.querySelector('#editDegreeModal .modal-content');
+    if (modalContent) {
+        modalContent.onclick = function(e) {
+            e.stopPropagation();
+        };
+    }
+});
+</script>
+
+<style>
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+}
+
+.modal-dialog {
+    position: relative;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 500px;
+    max-width: 90%;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 8px;
+}
+
+.modal-header {
+    padding: 1rem;
+    border-bottom: 1px solid #dee2e6;
+    background: #007bff;
+    color: white;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    padding: 1rem;
+    border-top: 1px solid #dee2e6;
+    text-align: right;
+}
+
+/* Table button styles */
+.btn-outline-warning {
+    color: #ffc107;
+    border-color: #ffc107;
+    background-color: transparent;
+}
+
+.btn-outline-warning:hover {
+    color: #212529;
+    background-color: #ffc107;
+    border-color: #ffc107;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(255, 193, 7, 0.3);
+}
+
+.btn-outline-danger {
+    color: #dc3545;
+    border-color: #dc3545;
+    background-color: transparent;
+}
+
+.btn-outline-danger:hover {
+    color: #fff;
+    background-color: #dc3545;
+    border-color: #dc3545;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    border-radius: 0.2rem;
+    transition: all 0.15s ease-in-out;
+}
+
+.btn-sm i {
+    font-size: 0.75rem;
+}
+
+/* Form improvements */
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: inline-block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #495057;
+}
+
+.form-control {
+    display: block;
+    width: 100%;
+    height: calc(1.5em + 0.75rem + 2px);
+    padding: 0.375rem 0.75rem;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: #495057;
+    background-color: #fff;
+    background-clip: padding-box;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus {
+    color: #495057;
+    background-color: #fff;
+    border-color: #80bdff;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.text-danger {
+    color: #dc3545;
+}
+
+/* Responsive modal */
+@media (max-width: 768px) {
+    .modal-dialog {
+        margin: 1rem;
+    }
+    
+    .modal-content {
+        min-width: auto;
+    }
+    
+    .modal-body .row {
+        margin: 0;
+    }
+    
+    .modal-body .col-md-6 {
+        padding: 0;
+        margin-bottom: 1rem;
+    }
+}
+.custom-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+}
+.custom-modal-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: 500px;
+    max-width: 90vw;
+}
+</style>

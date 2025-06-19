@@ -698,15 +698,53 @@ def api_create_degree():
         print(f"Error creating degree: {e}")
         return jsonify({'success': False, 'message': str(e)})
 
-@app.route('/api/degrees/list', methods=['GET'])
-def api_get_degrees_list():
+@app.route('/api/degrees/<int:id>', methods=['GET'])
+def api_get_degree(id):
     try:
         from models.degree import Degree
-        degrees = Degree.query.filter_by(is_active=True).order_by(Degree.coefficient).all()
-        degrees_data = [degree.to_dict() for degree in degrees]
-        return jsonify({'success': True, 'degrees': degrees_data})
+        degree = Degree.query.get(id)
+        if not degree:
+            return jsonify({'success': False, 'message': 'Không tìm thấy bằng cấp'})
+        
+        return jsonify({'success': True, 'degree': degree.to_dict()})
     except Exception as e:
-        print(f"Error getting degrees list: {e}")
+        print(f"Error getting degree: {e}")
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/degrees/<int:id>', methods=['PUT'])
+def api_update_degree(id):
+    try:
+        from models.degree import Degree
+        degree = Degree.query.get(id)
+        if not degree:
+            return jsonify({'success': False, 'message': 'Không tìm thấy bằng cấp'})
+        
+        data = request.get_json()
+        
+        # Check for existing degree with same name/abbreviation (exclude current)
+        if data.get('name') and data['name'] != degree.name:
+            existing_name = Degree.query.filter_by(name=data['name']).first()
+            if existing_name:
+                return jsonify({'success': False, 'message': 'Tên bằng cấp này đã tồn tại'})
+        
+        if data.get('abbreviation') and data['abbreviation'] != degree.abbreviation:
+            existing_abbr = Degree.query.filter_by(abbreviation=data['abbreviation']).first()
+            if existing_abbr:
+                return jsonify({'success': False, 'message': 'Viết tắt này đã tồn tại'})
+        
+        # Update fields
+        degree.name = data.get('name', degree.name)
+        degree.abbreviation = data.get('abbreviation', degree.abbreviation)
+        degree.coefficient = float(data.get('coefficient', degree.coefficient))
+        degree.description = data.get('description', degree.description)
+        
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Bằng cấp đã được cập nhật thành công!'})
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error updating degree: {e}")
         return jsonify({'success': False, 'message': str(e)})
 
 @app.route('/api/degrees/<int:id>', methods=['DELETE'])
@@ -717,25 +755,36 @@ def api_delete_degree(id):
         if not degree:
             return jsonify({'success': False, 'message': 'Không tìm thấy bằng cấp'})
         
-        # Check if any teachers are using this degree
-        teacher_count = 0
-        try:
-            if 'Teacher' in globals():
-                teacher_count = Teacher.query.filter_by(degree_id=id, is_active=True).count()
-        except:
-            pass
-        
-        if teacher_count > 0:
-            return jsonify({'success': False, 'message': f'Không thể xóa bằng cấp đang được sử dụng bởi {teacher_count} giảng viên'})
+        # Check if degree is being used by any teachers
+        from models.teacher import Teacher
+        teachers_using = Teacher.query.filter_by(degree_id=id, is_active=True).count()
+        if teachers_using > 0:
+            return jsonify({
+                'success': False, 
+                'message': f'Không thể xóa bằng cấp này vì đang có {teachers_using} giảng viên sử dụng'
+            })
         
         db.session.delete(degree)
         db.session.commit()
         
-        return jsonify({'success': True, 'message': 'Bằng cấp đã được xóa thành công'})
+        return jsonify({'success': True, 'message': 'Bằng cấp đã được xóa thành công!'})
         
     except Exception as e:
         db.session.rollback()
         print(f"Error deleting degree: {e}")
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/degrees/list', methods=['GET'])
+def api_degrees_list():
+    try:
+        from models.degree import Degree
+        degrees = Degree.query.filter_by(is_active=True).all()
+        degrees_list = [degree.to_dict() for degree in degrees]
+        
+        return jsonify({'success': True, 'degrees': degrees_list})
+        
+    except Exception as e:
+        print(f"Error getting degrees list: {e}")
         return jsonify({'success': False, 'message': str(e)})
 
 # API Routes for Departments
