@@ -38,71 +38,41 @@
                             <label for="teacher-phone">Số điện thoại:</label>
                             <input type="tel" id="teacher-phone" name="phone" class="form-control">
                         </div>
+                    </div>
+                    <div class="col-md-6">
                         <div class="form-group">
                             <label for="teacher-email">Email:</label>
                             <input type="email" id="teacher-email" name="email" class="form-control">
                         </div>
-                    </div>
-                    <div class="col-md-6">
                         <div class="form-group">
                             <label for="teacher-department">Thuộc khoa: <span class="text-danger">*</span></label>
                             <select id="teacher-department" name="department_id" class="form-control" required>
                                 <option value="">Chọn khoa</option>
-                                {% if departments %}
-                                    {% for department in departments %}
-                                    <option value="{{ department.id }}">{{ department.name }} ({{ department.abbreviation }})</option>
-                                    {% endfor %}
-                                {% else %}
-                                    <option value="" disabled>Đang tải khoa...</option>
-                                {% endif %}
+                                {% for department in departments %}
+                                <option value="{{ department.id }}">{{ department.name }} ({{ department.abbreviation }})</option>
+                                {% endfor %}
                             </select>
-                            <small class="text-muted">
-                                {% if departments %}
-                                    Có {{ departments|length }} khoa
-                                {% else %}
-                                    Chưa có khoa nào. <a href="{{ url_for('departments') }}">Thêm khoa mới</a>
-                                {% endif %}
-                            </small>
                         </div>
                         <div class="form-group">
                             <label for="teacher-degree">Bằng cấp: <span class="text-danger">*</span></label>
                             <select id="teacher-degree" name="degree_id" class="form-control" required>
                                 <option value="">Chọn bằng cấp</option>
-                                {% if degrees %}
-                                    {% for degree in degrees %}
-                                    <option value="{{ degree.id }}" data-coefficient="{{ degree.coefficient }}">
-                                        {{ degree.name }} ({{ degree.abbreviation }}) - Hệ số: {{ degree.coefficient }}
-                                    </option>
-                                    {% endfor %}
-                                {% else %}
-                                    <option value="" disabled>Đang tải bằng cấp...</option>
-                                {% endif %}
+                                {% for degree in degrees %}
+                                <option value="{{ degree.id }}" data-coefficient="{{ degree.coefficient }}">
+                                    {{ degree.name }} ({{ degree.abbreviation }}) - Hệ số: {{ degree.coefficient }}
+                                </option>
+                                {% endfor %}
                             </select>
-                            <small class="text-muted">
-                                {% if degrees %}
-                                    Có {{ degrees|length }} bằng cấp
-                                {% else %}
-                                    Chưa có bằng cấp nào. <a href="{{ url_for('degrees') }}">Thêm bằng cấp mới</a>
-                                {% endif %}
-                            </small>
                         </div>
                         <div class="form-group">
                             <label for="teacher-position">Chức vụ:</label>
                             <input type="text" id="teacher-position" name="position" class="form-control" placeholder="Ví dụ: Trưởng bộ môn">
                         </div>
                         <div class="form-group">
-                            <label for="teacher-base-salary">Lương cơ bản (VND):</label>
-                            <input type="number" id="teacher-base-salary" name="base_salary" class="form-control" min="0" value="5000000">
-                        </div>
-                        <div class="form-group">
-                            <label for="teacher-hourly-rate">Tiền dạy một tiết (VND):</label>
-                            <input type="number" id="teacher-hourly-rate" name="hourly_rate" class="form-control" min="0" value="100000">
+                            <label for="teacher-qualifications">Trình độ học vấn/Chuyên môn:</label>
+                            <textarea id="teacher-qualifications" name="qualifications" class="form-control" rows="3" placeholder="Mô tả trình độ học vấn, chuyên môn, kinh nghiệm..."></textarea>
                         </div>
                     </div>
-                </div>
-                <div class="form-group">
-                    <label for="teacher-qualifications">Trình độ học vấn/Chuyên môn:</label>
-                    <textarea id="teacher-qualifications" name="qualifications" class="form-control" rows="3" placeholder="Mô tả trình độ học vấn, chuyên môn, kinh nghiệm..."></textarea>
                 </div>
                 <button type="submit" class="btn btn-success" id="submit-btn">
                     <i class="fas fa-plus"></i> Thêm giảng viên
@@ -112,7 +82,7 @@
     </div>
 
     <div class="card">
-        <div class="card-header">
+        <div class="card-header d-flex justify-content-between align-items-center">
             <h3>Danh sách giảng viên</h3>
             <div class="d-flex">
                 <select id="filter-department" class="form-control mr-2" style="width: 200px;">
@@ -143,9 +113,9 @@
                             <th>Thao tác</th>
                         </tr>
                     </thead>
-                    <tbody id="teachers-tbody">
+                    <tbody>
                         {% for teacher in teachers %}
-                        <tr data-teacher-id="{{ teacher.id }}">
+                        <tr>
                             <td>{{ teacher.employee_code or '-' }}</td>
                             <td><strong>{{ teacher.name }}</strong></td>
                             <td>{{ teacher.age or '-' }}</td>
@@ -160,13 +130,17 @@
                                 </span>
                             </td>
                             <td>
-                                <button class="btn btn-sm btn-info" onclick="editTeacher({{ teacher.id }})">
+                                <button class="btn btn-warning btn-sm" onclick="editTeacher({{ teacher.id }})">
                                     <i class="fas fa-edit"></i> Sửa
                                 </button>
-                                <button class="btn btn-sm btn-danger" onclick="deleteTeacher({{ teacher.id }})">
+                                <button class="btn btn-danger btn-sm" onclick="deleteTeacher({{ teacher.id }})">
                                     <i class="fas fa-trash"></i> Xóa
                                 </button>
                             </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="10" class="text-center">Chưa có giảng viên nào</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -195,8 +169,16 @@
                             <label for="edit-teacher-birth-date">Ngày sinh:</label>
                             <input type="date" id="edit-teacher-birth-date" class="form-control">
                         </div>
+                        <div class="form-group">
+                            <label for="edit-teacher-phone">Điện thoại:</label>
+                            <input type="tel" id="edit-teacher-phone" class="form-control">
+                        </div>
                     </div>
                     <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="edit-teacher-email">Email:</label>
+                            <input type="email" id="edit-teacher-email" class="form-control">
+                        </div>
                         <div class="form-group">
                             <label for="edit-teacher-department">Khoa:</label>
                             <select id="edit-teacher-department" class="form-control" required>
@@ -214,8 +196,8 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="edit-teacher-hourly-rate">Tiền dạy một tiết:</label>
-                            <input type="number" id="edit-teacher-hourly-rate" class="form-control" min="0">
+                            <label for="edit-teacher-position">Chức vụ:</label>
+                            <input type="text" id="edit-teacher-position" class="form-control">
                         </div>
                     </div>
                 </div>
@@ -230,12 +212,7 @@
     <script>
         let isSubmitting = false;
 
-        // Filter teachers by department
-        document.getElementById('filter-department').addEventListener('change', function() {
-            refreshTeachersList();
-        });
-
-        // Handle form submission with better error handling
+        // Handle form submission
         document.getElementById('teacher-form').addEventListener('submit', function(e) {
             e.preventDefault();
             
@@ -246,44 +223,19 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang thêm...';
             
-            // Validate required fields
-            const name = document.getElementById('teacher-name').value.trim();
-            const departmentId = document.getElementById('teacher-department').value;
-            const degreeId = document.getElementById('teacher-degree').value;
-            
-            if (!name) {
-                showAlert('Vui lòng nhập tên giảng viên', 'error');
-                resetSubmitButton();
-                return;
-            }
-            
-            if (!departmentId) {
-                showAlert('Vui lòng chọn khoa', 'error');
-                resetSubmitButton();
-                return;
-            }
-            
-            if (!degreeId) {
-                showAlert('Vui lòng chọn bằng cấp', 'error');
-                resetSubmitButton();
-                return;
-            }
-            
             const formData = {
-                employee_code: document.getElementById('teacher-employee-code').value.trim() || null,
-                name: name,
-                birth_date: document.getElementById('teacher-birth-date').value || null,
-                phone: document.getElementById('teacher-phone').value.trim() || null,
-                email: document.getElementById('teacher-email').value.trim() || null,
-                department_id: parseInt(departmentId),
-                degree_id: parseInt(degreeId),
-                position: document.getElementById('teacher-position').value.trim() || null,
-                base_salary: parseFloat(document.getElementById('teacher-base-salary').value) || 0,
-                hourly_rate: parseFloat(document.getElementById('teacher-hourly-rate').value) || 100000,
-                qualifications: document.getElementById('teacher-qualifications').value.trim() || null
+                employee_code: document.getElementById('teacher-employee-code').value,
+                name: document.getElementById('teacher-name').value,
+                birth_date: document.getElementById('teacher-birth-date').value,
+                phone: document.getElementById('teacher-phone').value,
+                email: document.getElementById('teacher-email').value,
+                department_id: parseInt(document.getElementById('teacher-department').value),
+                degree_id: parseInt(document.getElementById('teacher-degree').value),
+                position: document.getElementById('teacher-position').value,
+                qualifications: document.getElementById('teacher-qualifications').value,
+                base_salary: 5000000,
+                hourly_rate: 100000
             };
-
-            console.log('Sending data:', formData);
 
             fetch('/api/teachers', {
                 method: 'POST',
@@ -294,32 +246,26 @@
             })
             .then(response => response.json())
             .then(data => {
-                console.log('Response:', data);
                 if (data.success) {
                     showAlert('Giảng viên đã được thêm thành công!', 'success');
                     document.getElementById('teacher-form').reset();
-                    document.getElementById('teacher-base-salary').value = '5000000';
-                    document.getElementById('teacher-hourly-rate').value = '100000';
                     refreshTeachersList();
                 } else {
                     showAlert('Lỗi: ' + data.message, 'error');
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
                 showAlert('Có lỗi xảy ra: ' + error.message, 'error');
             })
             .finally(() => {
-                resetSubmitButton();
+                isSubmitting = false;
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-plus"></i> Thêm giảng viên';
             });
         });
-        
-        function resetSubmitButton() {
-            isSubmitting = false;
-            const submitBtn = document.getElementById('submit-btn');
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-plus"></i> Thêm giảng viên';
-        }
+
+        // Filter teachers by department
+        document.getElementById('filter-department').addEventListener('change', refreshTeachersList);
 
         function refreshTeachersList() {
             const departmentId = document.getElementById('filter-department').value;
@@ -330,7 +276,7 @@
             
             fetch(url)
             .then(response => response.json())
-            .then data => {
+            .then(data => {
                 if (data.success) {
                     updateTeachersTable(data.teachers);
                 }
@@ -341,12 +287,16 @@
         }
 
         function updateTeachersTable(teachers) {
-            const tbody = document.getElementById('teachers-tbody');
+            const tbody = document.querySelector('#teachers-table tbody');
             tbody.innerHTML = '';
+            
+            if (teachers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" style="text-align: center;">Chưa có giảng viên nào</td></tr>';
+                return;
+            }
             
             teachers.forEach(teacher => {
                 const row = document.createElement('tr');
-                row.setAttribute('data-teacher-id', teacher.id);
                 row.innerHTML = `
                     <td>${teacher.employee_code || '-'}</td>
                     <td><strong>${teacher.name}</strong></td>
@@ -362,10 +312,10 @@
                         </span>
                     </td>
                     <td>
-                        <button class="btn btn-sm btn-info" onclick="editTeacher(${teacher.id})">
+                        <button class="btn btn-warning btn-sm" onclick="editTeacher(${teacher.id})">
                             <i class="fas fa-edit"></i> Sửa
                         </button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteTeacher(${teacher.id})">
+                        <button class="btn btn-danger btn-sm" onclick="deleteTeacher(${teacher.id})">
                             <i class="fas fa-trash"></i> Xóa
                         </button>
                     </td>
@@ -388,7 +338,7 @@
                     document.getElementById('edit-teacher-email').value = teacher.email || '';
                     document.getElementById('edit-teacher-department').value = teacher.department_id;
                     document.getElementById('edit-teacher-degree').value = teacher.degree_id;
-                    document.getElementById('edit-teacher-hourly-rate').value = teacher.hourly_rate;
+                    document.getElementById('edit-teacher-position').value = teacher.position || '';
                     
                     document.getElementById('edit-teacher-modal').style.display = 'block';
                 } else {
@@ -417,7 +367,7 @@
                 email: document.getElementById('edit-teacher-email').value,
                 department_id: document.getElementById('edit-teacher-department').value,
                 degree_id: document.getElementById('edit-teacher-degree').value,
-                hourly_rate: parseFloat(document.getElementById('edit-teacher-hourly-rate').value)
+                position: document.getElementById('edit-teacher-position').value
             };
 
             fetch(`/api/teachers/${id}`, {
@@ -432,7 +382,9 @@
                 if (data.success) {
                     showAlert('Giảng viên đã được cập nhật thành công!', 'success');
                     closeEditModal();
-                    refreshTeachersList();
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
                 } else {
                     showAlert('Lỗi: ' + data.message, 'error');
                 }
@@ -451,7 +403,9 @@
                 .then(data => {
                     if (data.success) {
                         showAlert('Giảng viên đã được xóa thành công!', 'success');
-                        refreshTeachersList();
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
                     } else {
                         showAlert('Lỗi: ' + data.message, 'error');
                     }
@@ -462,7 +416,6 @@
             }
         }
 
-        // Alert function
         function showAlert(message, type) {
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;

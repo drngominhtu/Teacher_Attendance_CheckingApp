@@ -23,6 +23,24 @@
                     </a>
                 </li>
                 <li>
+                    <a href="{{ url_for('degrees') }}">
+                        <i class="fas fa-graduation-cap"></i>
+                        Quản lý bằng cấp
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('departments') }}">
+                        <i class="fas fa-building"></i>
+                        Quản lý khoa
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('teachers') }}">
+                        <i class="fas fa-users"></i>
+                        Quản lý giảng viên
+                    </a>
+                </li>
+                <li>
                     <a href="{{ url_for('subjects') }}">
                         <i class="fas fa-book"></i>
                         Quản lý học phần
@@ -35,19 +53,7 @@
                     </a>
                 </li>
                 <li>
-                    <a href="{{ url_for('schedules') }}">
-                        <i class="fas fa-clock"></i>
-                        Thời khóa biểu
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('teachers') }}">
-                        <i class="fas fa-users"></i>
-                        Quản lý giảng viên
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('assignments') }}">
+                    <a href="{{ url_for('teaching_assignments') }}">
                         <i class="fas fa-user-tie"></i>
                         Phân công giảng viên
                     </a>
@@ -60,7 +66,7 @@
     <div class="main-content">
         <header class="main-header">
             <h2>Trang chủ</h2>
-            <div class="breadcrumb">Trang chủ</div>
+            <div class="breadcrumb">Chào mừng đến với hệ thống chấm công giáo viên</div>
         </header>
 
         <main class="content">
@@ -109,15 +115,12 @@
                                     <a href="{{ url_for('teachers') }}" class="btn btn-primary btn-sm">
                                         <i class="fas fa-user-tie"></i> Giảng viên
                                     </a>
-                                    <a href="{{ url_for('teacher_statistics') }}" class="btn btn-outline-primary btn-sm">
-                                        <i class="fas fa-chart-bar"></i> Thống kê
-                                    </a>
                                 </div>
                             </div>
 
                             <!-- Nhóm 2: Quản lý lớp học phần -->
                             <div class="feature-group mb-4">
-                                <h5><i class="fas fa-chalkboard-teacher text-success"></i> Quản lý lớp học phần</h5>
+                                <h5><i class="fas fa-chalkboard-teacher text-success"></i> Quản lý học phần</h5>
                                 <div class="feature-buttons">
                                     <a href="{{ url_for('subjects') }}" class="btn btn-outline-success btn-sm">
                                         <i class="fas fa-book"></i> Học phần
@@ -125,14 +128,8 @@
                                     <a href="{{ url_for('semesters') }}" class="btn btn-outline-success btn-sm">
                                         <i class="fas fa-calendar"></i> Kỳ học
                                     </a>
-                                    <a href="{{ url_for('class_sections') }}" class="btn btn-success btn-sm">
-                                        <i class="fas fa-chalkboard"></i> Lớp học phần
-                                    </a>
                                     <a href="{{ url_for('teaching_assignments') }}" class="btn btn-outline-success btn-sm">
                                         <i class="fas fa-user-clock"></i> Phân công
-                                    </a>
-                                    <a href="{{ url_for('class_statistics') }}" class="btn btn-outline-success btn-sm">
-                                        <i class="fas fa-chart-line"></i> Thống kê
                                     </a>
                                 </div>
                             </div>
@@ -205,9 +202,9 @@
                                     <i class="fas fa-book"></i>
                                     <span>Học phần</span>
                                 </a>
-                                <a href="{{ url_for('class_sections') }}" class="quick-access-item">
-                                    <i class="fas fa-chalkboard"></i>
-                                    <span>Lớp HP</span>
+                                <a href="{{ url_for('semesters') }}" class="quick-access-item">
+                                    <i class="fas fa-calendar"></i>
+                                    <span>Kỳ học</span>
                                 </a>
                                 <a href="{{ url_for('teaching_assignments') }}" class="quick-access-item">
                                     <i class="fas fa-user-clock"></i>

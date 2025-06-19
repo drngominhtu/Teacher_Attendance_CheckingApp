@@ -94,9 +94,3 @@ def migrate_database():
 # Chỉ chạy nếu script được thực thi trực tiếp
 if __name__ == "__main__":
     migrate_database()
-    finally:
-        conn.close()
-
-# Chỉ chạy nếu script được thực thi trực tiếp
-if __name__ == "__main__":
-    migrate_database()

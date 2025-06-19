@@ -90,6 +90,8 @@ def index():
         subjects_count = 0
         teachers_count = 0
         departments_count = 0
+        semesters_count = 0
+        class_sections_count = 0
         
         try:
             if 'Subject' in globals():
@@ -98,18 +100,20 @@ def index():
                 teachers_count = Teacher.query.count()
             if 'Department' in globals():
                 departments_count = Department.query.count()
+            if 'Semester' in globals():
+                semesters_count = Semester.query.count()
         except:
             pass
         
-        return render_template('base.html', 
+        return render_template('index.html', 
                              subjects_count=subjects_count,
                              teachers_count=teachers_count,
                              departments_count=departments_count,
-                             semesters_count=0,
-                             class_sections_count=0,
-                             master_degree_rate=0,
-                             assigned_classes_rate=0,
-                             avg_enrollment_rate=0)
+                             semesters_count=semesters_count,
+                             class_sections_count=class_sections_count,
+                             master_degree_rate=75,
+                             assigned_classes_rate=80,
+                             avg_enrollment_rate=85)
     except Exception as e:
         print(f"Index route error: {e}")
         return f"Error: {e}", 500
@@ -657,6 +661,94 @@ def get_teachers_list():
         return jsonify({'success': True, 'teachers': teachers_data})
     except Exception as e:
         print(f"Error getting teachers list: {e}")
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/teachers/<int:id>', methods=['GET'])
+def api_get_teacher(id):
+    try:
+        from models.teacher import Teacher
+        teacher = Teacher.query.get(id)
+        if not teacher:
+            return jsonify({'success': False, 'message': 'Không tìm thấy giảng viên'})
+        
+        return jsonify({'success': True, 'teacher': teacher.to_dict()})
+    except Exception as e:
+        print(f"Error getting teacher: {e}")
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/teachers/<int:id>', methods=['PUT'])
+def api_update_teacher(id):
+    try:
+        from models.teacher import Teacher
+        teacher = Teacher.query.get(id)
+        if not teacher:
+            return jsonify({'success': False, 'message': 'Không tìm thấy giảng viên'})
+        
+        data = request.get_json()
+        
+        # Check for existing teacher with same employee_code/email (exclude current)
+        if data.get('employee_code') and data['employee_code'] != teacher.employee_code:
+            existing_code = Teacher.query.filter_by(employee_code=data['employee_code']).first()
+            if existing_code:
+                return jsonify({'success': False, 'message': 'Mã số giảng viên này đã tồn tại'})
+        
+        if data.get('email') and data['email'] != teacher.email:
+            existing_email = Teacher.query.filter_by(email=data['email']).first()
+            if existing_email:
+                return jsonify({'success': False, 'message': 'Email này đã tồn tại'})
+        
+        # Update fields
+        teacher.employee_code = data.get('employee_code', teacher.employee_code)
+        teacher.name = data.get('name', teacher.name)
+        teacher.phone = data.get('phone', teacher.phone)
+        teacher.email = data.get('email', teacher.email)
+        teacher.department_id = int(data.get('department_id', teacher.department_id))
+        teacher.degree_id = int(data.get('degree_id', teacher.degree_id))
+        teacher.position = data.get('position', teacher.position)
+        teacher.qualifications = data.get('qualifications', teacher.qualifications)
+        
+        # Handle birth_date
+        if data.get('birth_date'):
+            try:
+                from datetime import datetime as dt_parser
+                teacher.birth_date = dt_parser.strptime(data['birth_date'], '%Y-%m-%d').date()
+            except:
+                pass
+        
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Giảng viên đã được cập nhật thành công!'})
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error updating teacher: {e}")
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/teachers/<int:id>', methods=['DELETE'])
+def api_delete_teacher(id):
+    try:
+        from models.teacher import Teacher
+        teacher = Teacher.query.get(id)
+        if not teacher:
+            return jsonify({'success': False, 'message': 'Không tìm thấy giảng viên'})
+        
+        # Check if any teaching assignments are using this teacher
+        try:
+            if 'TeachingAssignment' in globals():
+                assignment_count = TeachingAssignment.query.filter_by(teacher_id=id).count()
+                if assignment_count > 0:
+                    return jsonify({'success': False, 'message': f'Không thể xóa giảng viên đang có {assignment_count} phân công giảng dạy'})
+        except:
+            pass
+        
+        db.session.delete(teacher)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Giảng viên đã được xóa thành công!'})
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error deleting teacher: {e}")
         return jsonify({'success': False, 'message': str(e)})
 
 # API Routes for Degrees
