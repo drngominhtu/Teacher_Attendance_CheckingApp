@@ -1,176 +1,152 @@
 from database import db
-from models.base import BaseModel
 from datetime import datetime
 
-class ClassSection(BaseModel):
+class ClassSection(db.Model):
     __tablename__ = 'class_sections'
     
-    # Basic information
-    code = db.Column(db.String(50), nullable=False, unique=True)
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(20), unique=True, nullable=False)
     name = db.Column(db.String(200), nullable=False)
-    
-    # Foreign keys
-    subject_id = db.Column(db.Integer, nullable=False)
-    semester_id = db.Column(db.Integer, nullable=False)
-    teacher_id = db.Column(db.Integer, nullable=True)
-    
-    # Class details
+    subject_id = db.Column(db.Integer, db.ForeignKey('subjects.id'), nullable=False)
+    semester_id = db.Column(db.Integer, db.ForeignKey('semesters.id'), nullable=False)
+    teacher_id = db.Column(db.Integer, db.ForeignKey('teachers.id'), nullable=True)
     student_count = db.Column(db.Integer, default=0)
     max_students = db.Column(db.Integer, default=50)
     classroom = db.Column(db.String(50))
     schedule_info = db.Column(db.String(200))
-    
-    # Dates
     start_date = db.Column(db.Date)
     end_date = db.Column(db.Date)
-    
-    # Status and notes
-    status = db.Column(db.String(20), default='planned')  # planned, active, completed, cancelled
     notes = db.Column(db.Text)
-    
-    @property
-    def enrollment_rate(self):
-        """Calculate enrollment rate as percentage"""
-        if self.max_students == 0:
-            return 0
-        return (self.student_count / self.max_students) * 100
-    
-    @property
-    def class_coefficient(self):
-        """Calculate class coefficient based on student count"""
-        if self.student_count < 20:
-            return -0.3
-        elif self.student_count <= 29:
-            return -0.2
-        elif self.student_count <= 39:
-            return -0.1
-        elif self.student_count <= 49:
-            return 0.0
-        elif self.student_count <= 59:
-            return 0.1
-        elif self.student_count <= 69:
-            return 0.2
-        elif self.student_count <= 79:
-            return 0.3
-        else:
-            return 0.4
-    
-    @property
-    def is_full(self):
-        """Check if class is full"""
-        return self.student_count >= self.max_students
-    
-    @property
-    def available_slots(self):
-        """Get number of available slots"""
-        return max(0, self.max_students - self.student_count)
-    
-    def get_subject_info(self):
-        """Get subject information safely"""
-        try:
-            from models.subject import Subject
-            return Subject.query.get(self.subject_id)
-        except:
-            return None
-    
-    def get_semester_info(self):
-        """Get semester information safely"""
-        try:
-            from models.semester import Semester
-            return Semester.query.get(self.semester_id)
-        except:
-            return None
-    
-    def get_teacher_info(self):
-        """Get teacher information safely"""
-        if not self.teacher_id:
-            return None
-        try:
-            from models.teacher import Teacher
-            return Teacher.query.get(self.teacher_id)
-        except:
-            return None
-    
-    def assign_teacher(self, teacher_id):
-        """Assign a teacher to this class section"""
-        self.teacher_id = teacher_id
-        return self.save()
-    
-    def update_enrollment(self, new_count):
-        """Update student enrollment count"""
-        if 0 <= new_count <= self.max_students:
-            self.student_count = new_count
-            return self.save()
-        return False
-    
-    def activate(self):
-        """Activate the class section"""
-        self.status = 'active'
-        return self.save()
-    
-    def complete(self):
-        """Mark class section as completed"""
-        self.status = 'completed'
-        return self.save()
-    
-    def cancel(self):
-        """Cancel the class section"""
-        self.status = 'cancelled'
-        return self.save()
+    status = db.Column(db.String(20), default='planned')  # planned, active, completed, cancelled
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     def to_dict(self):
-        """Convert to dictionary with related data"""
-        base_dict = super().to_dict()
-        
-        # Get related objects
-        subject_info = self.get_subject_info()
-        semester_info = self.get_semester_info()
-        teacher_info = self.get_teacher_info()
-        
-        # Build result dictionary
-        result = {
-            **base_dict,
-            'code': self.code,
-            'name': self.name,
-            'subject_id': self.subject_id,
-            'semester_id': self.semester_id,
-            'teacher_id': self.teacher_id,
-            'student_count': self.student_count,
-            'max_students': self.max_students,
-            'classroom': self.classroom,
-            'schedule_info': self.schedule_info,
-            'start_date': self.start_date.isoformat() if self.start_date else None,
-            'end_date': self.end_date.isoformat() if self.end_date else None,
-            'status': self.status,
-            'notes': self.notes,
-            'is_active': self.is_active,
+        """Convert class section to dictionary"""
+        try:
+            # Get subject info safely
+            subject_name = "N/A"
+            subject_credits = 0
+            if self.subject_id:
+                try:
+                    from models.subject import Subject
+                    subject = Subject.query.get(self.subject_id)
+                    if subject:
+                        subject_name = subject.name
+                        subject_credits = subject.credits or 0
+                except Exception as e:
+                    print(f"Error getting subject: {e}")
             
-            # Calculated properties
-            'enrollment_rate': round(self.enrollment_rate, 2),
-            'class_coefficient': self.class_coefficient,
-            'is_full': self.is_full,
-            'available_slots': self.available_slots,
+            # Get semester info safely
+            semester_name = "N/A"
+            semester_year = "N/A"
+            if self.semester_id:
+                try:
+                    from models.semester import Semester
+                    semester = Semester.query.get(self.semester_id)
+                    if semester:
+                        semester_name = semester.name
+                        semester_year = str(semester.year)
+                except Exception as e:
+                    print(f"Error getting semester: {e}")
             
-            # Related data
-            'subject_name': subject_info.name if subject_info else None,
-            'subject_code': subject_info.code if subject_info else None,
-            'subject_credits': subject_info.credits if subject_info else None,
-            'semester_name': semester_info.name if semester_info else None,
-            'semester_year': semester_info.year if semester_info else None,
-            'teacher_name': teacher_info.name if teacher_info else None,
-            'teacher_department': None
-        }
-        
-        # Add teacher department info safely
-        if teacher_info:
-            try:
-                dept_info = teacher_info.get_department_info()
-                if dept_info:
-                    result['teacher_department'] = dept_info.name
-            except:
-                pass
-        
-        return result
+            # Get teacher info safely
+            teacher_name = None
+            teacher_department = None
+            if self.teacher_id:
+                try:
+                    from models.teacher import Teacher
+                    teacher = Teacher.query.get(self.teacher_id)
+                    if teacher:
+                        teacher_name = teacher.name
+                        if hasattr(teacher, 'department_abbreviation'):
+                            teacher_department = teacher.department_abbreviation
+                except Exception as e:
+                    print(f"Error getting teacher: {e}")
+            
+            return {
+                'id': self.id,
+                'code': self.code,
+                'name': self.name,
+                'subject_id': self.subject_id,
+                'subject_name': subject_name,
+                'subject_credits': subject_credits,
+                'semester_id': self.semester_id,
+                'semester_name': semester_name,
+                'semester_year': semester_year,
+                'teacher_id': self.teacher_id,
+                'teacher_name': teacher_name,
+                'teacher_department': teacher_department,
+                'student_count': self.student_count or 0,
+                'max_students': self.max_students or 50,
+                'classroom': self.classroom,
+                'schedule_info': self.schedule_info,
+                'start_date': self.start_date.isoformat() if self.start_date else None,
+                'end_date': self.end_date.isoformat() if self.end_date else None,
+                'notes': self.notes,
+                'status': self.status or 'planned',
+                'is_active': self.is_active,
+                'created_at': self.created_at.isoformat() if self.created_at else None
+            }
+        except Exception as e:
+            print(f"Error in class_section.to_dict(): {e}")
+            # Return basic data if error occurs
+            return {
+                'id': self.id,
+                'code': self.code or 'N/A',
+                'name': self.name or 'N/A',
+                'subject_id': self.subject_id,
+                'subject_name': 'N/A',
+                'subject_credits': 0,
+                'semester_id': self.semester_id,
+                'semester_name': 'N/A',
+                'semester_year': 'N/A',
+                'teacher_id': self.teacher_id,
+                'teacher_name': None,
+                'teacher_department': None,
+                'student_count': self.student_count or 0,
+                'max_students': self.max_students or 50,
+                'classroom': self.classroom,
+                'schedule_info': self.schedule_info,
+                'start_date': None,
+                'end_date': None,
+                'notes': self.notes,
+                'status': self.status or 'planned',
+                'is_active': True,
+                'created_at': None
+            }
+    
+    def save(self):
+        """Save class section to database"""
+        try:
+            db.session.add(self)
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error saving class section: {e}")
+            return False
+    
+    def delete(self):
+        """Delete class section from database"""
+        try:
+            db.session.delete(self)
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error deleting class section: {e}")
+            return False
+    
+    @staticmethod
+    def get_by_id(id):
+        """Get class section by ID"""
+        try:
+            return ClassSection.query.get(id)
+        except Exception as e:
+            print(f"Error getting class section by ID: {e}")
+        return None
     
     def __repr__(self):
         return f"<ClassSection(code='{self.code}', name='{self.name}', status='{self.status}')>"

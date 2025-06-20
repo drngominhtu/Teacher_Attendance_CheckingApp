@@ -5,6 +5,7 @@ import os
 import sqlite3
 
 def migrate_database():
+    """Run database migration"""
     # Cấu hình đường dẫn
     current_dir = os.path.dirname(os.path.abspath(__file__))
     instance_dir = os.path.join(current_dir, 'instance')
@@ -48,6 +49,31 @@ def migrate_database():
         )
         ''')
         
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS class_sections (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                code VARCHAR(20) UNIQUE NOT NULL,
+                name VARCHAR(200) NOT NULL,
+                subject_id INTEGER,
+                semester_id INTEGER,
+                teacher_id INTEGER,
+                student_count INTEGER DEFAULT 0,
+                max_students INTEGER DEFAULT 50,
+                classroom VARCHAR(50),
+                schedule_info VARCHAR(200),
+                start_date DATE,
+                end_date DATE,
+                notes TEXT,
+                status VARCHAR(20) DEFAULT 'planned',
+                is_active BOOLEAN DEFAULT 1,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (subject_id) REFERENCES subjects (id),
+                FOREIGN KEY (semester_id) REFERENCES semesters (id),
+                FOREIGN KEY (teacher_id) REFERENCES teachers (id)
+            )
+        ''')
+        
         # Insert basic data
         degrees = [
             ('Đại học', 'ĐH', 1.3, 'Bằng cử nhân'),
@@ -82,6 +108,7 @@ def migrate_database():
         
         conn.commit()
         print(f"Migration v3 hoàn thành! Đã có {degree_count} bằng cấp và {dept_count} khoa.")
+        print("✓ Database migration completed successfully")
         return True
         
     except Exception as e:

@@ -61,6 +61,14 @@ with app.app_context():
         except ImportError:
             print("! TeachingAssignment model not found - will create empty list")
         
+        # Try to import ClassSection
+        try:
+            from models.class_section import ClassSection
+            globals()['ClassSection'] = ClassSection
+            print("✓ ClassSection model imported")
+        except ImportError:
+            print("! ClassSection model not found - will create empty list")
+        
         # Make them globally available
         globals()['Degree'] = Degree
         globals()['Department'] = Department
@@ -80,7 +88,6 @@ with app.app_context():
         
     except Exception as e:
         print(f"Model import error: {e}")
-        # Continue without models if needed
 
 # Routes - keep simple for now
 @app.route('/')
@@ -363,8 +370,13 @@ def class_sections():
         semesters_list = []
         teachers_list = []
         
-        if 'ClassSection' in globals():
-            class_sections_list = ClassSection.query.filter_by(is_active=True).order_by(ClassSection.created_at.desc()).all()
+        try:
+            from models.class_section import ClassSection
+            class_sections_raw = ClassSection.query.filter_by(is_active=True).order_by(ClassSection.created_at.desc()).all()
+            class_sections_list = [cs.to_dict() for cs in class_sections_raw]
+        except Exception as e:
+            print(f"Error loading class sections: {e}")
+        
         if 'Subject' in globals():
             subjects_list = Subject.query.filter_by(is_active=True).all()
         if 'Semester' in globals():
@@ -1292,8 +1304,17 @@ def api_get_class_sections_list():
     try:
         try:
             from models.class_section import ClassSection
-            class_sections = ClassSection.query.filter_by(is_active=True).order_by(ClassSection.created_at.desc()).all()
+            
+            # Get filter parameters
+            semester_id = request.args.get('semester_id')
+            
+            query = ClassSection.query.filter_by(is_active=True)
+            if semester_id:
+                query = query.filter_by(semester_id=semester_id)
+            
+            class_sections = query.order_by(ClassSection.created_at.desc()).all()
             class_sections_data = [cs.to_dict() for cs in class_sections]
+            
             return jsonify({'success': True, 'class_sections': class_sections_data})
         except ImportError:
             return jsonify({'success': True, 'class_sections': []})
@@ -1324,7 +1345,60 @@ def api_delete_class_section(id):
         print(f"Error deleting class section: {e}")
         return jsonify({'success': False, 'message': str(e)})
 
-# API Routes for Semesters
+@app.route('/api/class-sections/<int:id>', methods=['GET'])
+def api_get_class_section(id):
+    try:
+        try:
+            from models.class_section import ClassSection
+        except ImportError:
+            return jsonify({'success': False, 'message': 'ClassSection model not available'})
+            
+        class_section = ClassSection.query.get(id)
+        if not class_section:
+            return jsonify({'success': False, 'message': 'Không tìm thấy lớp học phần'})
+        
+        return jsonify({'success': True, 'class_section': class_section.to_dict()})
+    except Exception as e:
+        print(f"Error getting class section: {e}")
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/class-sections/<int:id>', methods=['PUT'])
+def api_update_class_section(id):
+    try:
+        try:
+            from models.class_section import ClassSection
+        except ImportError:
+            return jsonify({'success': False, 'message': 'ClassSection model not available'})
+            
+        class_section = ClassSection.query.get(id)
+        if not class_section:
+            return jsonify({'success': False, 'message': 'Không tìm thấy lớp học phần'})
+        
+        data = request.get_json()
+        
+        # Check for existing class section with same code (exclude current)
+        if data.get('code') and data['code'] != class_section.code:
+            existing_code = ClassSection.query.filter_by(code=data['code']).first()
+            if existing_code:
+                return jsonify({'success': False, 'message': 'Mã lớp này đã tồn tại'})
+        
+        # Update fields
+        class_section.code = data.get('code', class_section.code)
+        class_section.name = data.get('name', class_section.name)
+        class_section.student_count = data.get('student_count', class_section.student_count)
+        class_section.max_students = data.get('max_students', class_section.max_students)
+        class_section.classroom = data.get('classroom', class_section.classroom)
+        class_section.schedule_info = data.get('schedule_info', class_section.schedule_info)
+        
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Lớp học phần đã được cập nhật thành công!'})
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error updating class section: {e}")
+        return jsonify({'success': False, 'message': str(e)})
+
 @app.route('/api/semesters', methods=['POST'])
 def api_create_semester():
     try:
