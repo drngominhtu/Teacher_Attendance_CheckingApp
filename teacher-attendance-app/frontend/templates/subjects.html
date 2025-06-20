@@ -11,7 +11,7 @@
 
     {% block title %}Quản lý học phần{% endblock %}
     {% block page_title %}Quản lý học phần{% endblock %}
-    {% block breadcrumb %}Trang chủ / Quản lý lớp học phần / Quản lý học phần{% endblock %}
+    {% block breadcrumb %}Trang chủ / Quản lý học phần{% endblock %}
 
     {% block content %}
     <div class="card">
@@ -79,7 +79,7 @@
     </div>
 
     <div class="card">
-        <div class="card-header">
+        <div class="card-header d-flex justify-content-between align-items-center">
             <h3>Danh sách học phần</h3>
             <div class="d-flex">
                 <select id="filter-department" class="form-control mr-2" style="width: 200px;">
@@ -95,20 +95,20 @@
         </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-striped">
+                <table class="table table-striped" id="subjects-table">
                     <thead>
                         <tr>
                             <th>Mã HP</th>
                             <th>Tên học phần</th>
                             <th>Khoa</th>
                             <th>Tín chỉ</th>
-                            <th>Tiết LT/TH</th>
+                            <th>Số tiết (LT/TH)</th>
                             <th>Hệ số</th>
                             <th>Số lớp</th>
                             <th>Thao tác</th>
                         </tr>
                     </thead>
-                    <tbody id="subjects-tbody">
+                    <tbody>
                         {% for subject in subjects %}
                         <tr>
                             <td><span class="badge badge-info">{{ subject.code or '-' }}</span></td>
@@ -129,7 +129,7 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="8" style="text-align: center;">Chưa có học phần nào</td>
+                            <td colspan="8" class="text-center">Chưa có học phần nào</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -138,26 +138,63 @@
         </div>
     </div>
 
-    <!-- Edit Modal -->
-    <div id="edit-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
-        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; width: 400px;">
-            <h3>Chỉnh sửa học phần</h3>
+    <div id="edit-subject-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; width: 600px; max-height: 80vh; overflow-y: auto;">
+            <h4>Chỉnh sửa học phần</h4>
             <form id="edit-subject-form">
                 <input type="hidden" id="edit-subject-id">
-                <div class="form-group">
-                    <label for="edit-subject-name">Tên học phần:</label>
-                    <input type="text" id="edit-subject-name" name="name" class="form-control" required>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="edit-subject-code">Mã học phần:</label>
+                            <input type="text" id="edit-subject-code" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-subject-name">Tên học phần:</label>
+                            <input type="text" id="edit-subject-name" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-subject-department">Khoa:</label>
+                            <select id="edit-subject-department" class="form-control" required>
+                                {% for department in departments %}
+                                <option value="{{ department.id }}">{{ department.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-subject-credits">Tín chỉ:</label>
+                            <input type="number" id="edit-subject-credits" class="form-control" min="1" max="10">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="edit-subject-theory-hours">Số tiết lý thuyết:</label>
+                            <input type="number" id="edit-subject-theory-hours" class="form-control" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-subject-practice-hours">Số tiết thực hành:</label>
+                            <input type="number" id="edit-subject-practice-hours" class="form-control" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-subject-coefficient">Hệ số học phần:</label>
+                            <input type="number" id="edit-subject-coefficient" class="form-control" step="0.1" min="0.5" max="3.0">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-subject-difficulty">Độ khó:</label>
+                            <select id="edit-subject-difficulty" class="form-control">
+                                <option value="easy">Dễ</option>
+                                <option value="normal">Bình thường</option>
+                                <option value="hard">Khó</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
                 <div class="form-group">
-                    <label for="edit-subject-department">Khoa:</label>
-                    <input type="text" id="edit-subject-department" name="department" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="edit-subject-student-count">Số sinh viên:</label>
-                    <input type="number" id="edit-subject-student-count" name="student_count" class="form-control" min="0">
+                    <label for="edit-subject-description">Mô tả:</label>
+                    <textarea id="edit-subject-description" class="form-control" rows="3"></textarea>
                 </div>
                 <button type="submit" class="btn btn-success">Cập nhật</button>
-                <button type="button" class="btn" onclick="closeEditModal()">Hủy</button>
+                <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Hủy</button>
             </form>
         </div>
     </div>
@@ -258,18 +295,78 @@
         });
     });
 
+    // Filter subjects by department
+    document.getElementById('filter-department').addEventListener('change', refreshSubjectsList);
+
+    function refreshSubjectsList() {
+        const departmentId = document.getElementById('filter-department').value;
+        let url = '/api/subjects/list';
+        if (departmentId) {
+            url += `?department_id=${departmentId}`;
+        }
+        
+        fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateSubjectsTable(data.subjects);
+            }
+        })
+        .catch(error => {
+            console.error('Error refreshing subjects:', error);
+        });
+    }
+
+    function updateSubjectsTable(subjects) {
+        const tbody = document.querySelector('#subjects-table tbody');
+        tbody.innerHTML = '';
+        
+        if (subjects.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Chưa có học phần nào</td></tr>';
+            return;
+        }
+        
+        subjects.forEach(subject => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><span class="badge badge-info">${subject.code || '-'}</span></td>
+                <td><strong>${subject.name}</strong></td>
+                <td>${subject.department_abbreviation}</td>
+                <td><span class="badge badge-success">${subject.credits}</span></td>
+                <td>${subject.theory_hours}/${subject.practice_hours}</td>
+                <td>${subject.subject_coefficient.toFixed(1)}</td>
+                <td>${subject.total_classes}</td>
+                <td>
+                    <button class="btn btn-warning btn-sm" onclick="editSubject(${subject.id})">
+                        <i class="fas fa-edit"></i> Sửa
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteSubject(${subject.id})">
+                        <i class="fas fa-trash"></i> Xóa
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
     function editSubject(id) {
-        // Fetch subject details for editing
         fetch(`/api/subjects/${id}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
                 const subject = data.subject;
                 document.getElementById('edit-subject-id').value = subject.id;
+                document.getElementById('edit-subject-code').value = subject.code || '';
                 document.getElementById('edit-subject-name').value = subject.name;
                 document.getElementById('edit-subject-department').value = subject.department_id;
-                document.getElementById('edit-subject-student-count').value = subject.student_count;
-                document.getElementById('edit-modal').style.display = 'block';
+                document.getElementById('edit-subject-credits').value = subject.credits;
+                document.getElementById('edit-subject-theory-hours').value = subject.theory_hours;
+                document.getElementById('edit-subject-practice-hours').value = subject.practice_hours;
+                document.getElementById('edit-subject-coefficient').value = subject.subject_coefficient;
+                document.getElementById('edit-subject-difficulty').value = subject.difficulty_level;
+                document.getElementById('edit-subject-description').value = subject.description || '';
+                
+                document.getElementById('edit-subject-modal').style.display = 'block';
             } else {
                 showAlert('Lỗi: ' + data.message, 'error');
             }
@@ -280,11 +377,52 @@
     }
 
     function closeEditModal() {
-        document.getElementById('edit-modal').style.display = 'none';
+        document.getElementById('edit-subject-modal').style.display = 'none';
     }
 
+    // Handle edit form submission
+    document.getElementById('edit-subject-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const id = document.getElementById('edit-subject-id').value;
+        const formData = {
+            code: document.getElementById('edit-subject-code').value,
+            name: document.getElementById('edit-subject-name').value,
+            department_id: document.getElementById('edit-subject-department').value,
+            credits: parseInt(document.getElementById('edit-subject-credits').value),
+            theory_hours: parseInt(document.getElementById('edit-subject-theory-hours').value),
+            practice_hours: parseInt(document.getElementById('edit-subject-practice-hours').value),
+            subject_coefficient: parseFloat(document.getElementById('edit-subject-coefficient').value),
+            difficulty_level: document.getElementById('edit-subject-difficulty').value,
+            description: document.getElementById('edit-subject-description').value
+        };
+
+        fetch(`/api/subjects/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('Học phần đã được cập nhật thành công!', 'success');
+                closeEditModal();
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                showAlert('Lỗi: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+        });
+    });
+
     function deleteSubject(id) {
-        if (confirmDelete('Bạn có chắc chắn muốn xóa học phần này?')) {
+        if (confirm('Bạn có chắc chắn muốn xóa học phần này?')) {
             fetch(`/api/subjects/${id}`, {
                 method: 'DELETE'
             })
@@ -313,56 +451,6 @@
         const theoryHours = parseInt(document.getElementById('subject-theory-hours').value) || 0;
         const practiceHours = parseInt(document.getElementById('subject-practice-hours').value) || 0;
         // Could add total hours field if needed
-    }
-
-    // Filter by department
-    document.getElementById('filter-department').addEventListener('change', function() {
-        refreshSubjectsList();
-    });
-
-    function refreshSubjectsList() {
-        const departmentId = document.getElementById('filter-department').value;
-        let url = '/api/subjects/list';
-        if (departmentId) {
-            url += `?department_id=${departmentId}`;
-        }
-        
-        fetch(url)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                updateSubjectsTable(data.subjects);
-            }
-        })
-        .catch(error => {
-            console.error('Error refreshing subjects:', error);
-        });
-    }
-
-    function updateSubjectsTable(subjects) {
-        const tbody = document.getElementById('subjects-tbody');
-        tbody.innerHTML = '';
-        subjects.forEach(subject => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td><span class="badge badge-info">${subject.code || '-'}</span></td>
-                <td><strong>${subject.name}</strong></td>
-                <td>${subject.department_abbreviation}</td>
-                <td><span class="badge badge-success">${subject.credits}</span></td>
-                <td>${subject.theory_hours}/${subject.practice_hours}</td>
-                <td>${(subject.subject_coefficient).toFixed(1)}</td>
-                <td>${subject.total_classes}</td>
-                <td>
-                    <button class="btn btn-warning btn-sm" onclick="editSubject(${subject.id})">
-                        <i class="fas fa-edit"></i> Sửa
-                    </button>
-                    <button class="btn btn-danger btn-sm" onclick="deleteSubject(${subject.id})">
-                        <i class="fas fa-trash"></i> Xóa
-                    </button>
-                </td>
-            `;
-            tbody.appendChild(row);
-        });
     }
     </script>
     {% endblock %}

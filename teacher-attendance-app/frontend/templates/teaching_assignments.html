@@ -18,11 +18,8 @@
                         <select id="assignment-teacher" name="teacher_id" class="form-control" required>
                             <option value="">Chọn giảng viên</option>
                             {% for teacher in teachers %}
-                            <option value="{{ teacher.id }}" 
-                                    data-coefficient="{{ teacher.effective_teacher_coefficient }}" 
-                                    data-hourly-rate="{{ teacher.hourly_rate }}"
-                                    data-department="{{ teacher.department_name }}">
-                                {{ teacher.name }} - {{ teacher.department_name }} (Hệ số: {{ "%.2f"|format(teacher.effective_teacher_coefficient) }})
+                            <option value="{{ teacher.id }}" data-coefficient="{{ teacher.effective_teacher_coefficient }}" data-hourly-rate="{{ teacher.hourly_rate or 100000 }}">
+                                {{ teacher.name }} ({{ teacher.department_abbreviation }})
                             </option>
                             {% endfor %}
                         </select>
@@ -32,10 +29,8 @@
                         <select id="assignment-subject" name="subject_id" class="form-control" required>
                             <option value="">Chọn học phần</option>
                             {% for subject in subjects %}
-                            <option value="{{ subject.id }}" 
-                                    data-subject-coefficient="{{ subject.subject_coefficient }}"
-                                    data-credits="{{ subject.credits }}">
-                                {{ subject.name }} - {{ subject.department_name }} ({{ subject.credits }} TC, Hệ số: {{ "%.1f"|format(subject.subject_coefficient) }})
+                            <option value="{{ subject.id }}" data-subject-coefficient="{{ subject.subject_coefficient }}">
+                                {{ subject.name }} ({{ subject.credits }} TC)
                             </option>
                             {% endfor %}
                         </select>
@@ -43,27 +38,51 @@
                     <div class="form-group">
                         <label for="assignment-semester">Kỳ học:</label>
                         <select id="assignment-semester" name="semester_id" class="form-control">
-                            <option value="">Chọn kỳ học (tùy chọn)</option>
+                            <option value="">Chọn kỳ học (không bắt buộc)</option>
                             {% for semester in semesters %}
-                            <option value="{{ semester.id }}">{{ semester.name }} - {{ semester.year }}</option>
+                            <option value="{{ semester.id }}" {% if semester.is_current %}selected{% endif %}>
+                                {{ semester.name }} - {{ semester.year }}
+                            </option>
                             {% endfor %}
                         </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="assignment-class-code">Mã lớp: <span class="text-danger">*</span></label>
+                        <input type="text" id="assignment-class-code" name="class_code" class="form-control" required placeholder="VD: IT101.01">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label for="assignment-class-code">Mã lớp: <span class="text-danger">*</span></label>
-                        <input type="text" id="assignment-class-code" name="class_code" class="form-control" required placeholder="Ví dụ: IT101.01">
+                        <label for="assignment-student-count">Số sinh viên:</label>
+                        <input type="number" id="assignment-student-count" name="class_student_count" class="form-control" min="1" value="30">
                     </div>
                     <div class="form-group">
-                        <label for="assignment-student-count">Số sinh viên: <span class="text-danger">*</span></label>
-                        <input type="number" id="assignment-student-count" name="class_student_count" class="form-control" min="1" max="200" value="30" required>
+                        <label for="assignment-planned-hours">Số tiết kế hoạch: <span class="text-danger">*</span></label>
+                        <input type="number" id="assignment-planned-hours" name="planned_hours" class="form-control" required min="1" value="45">
                     </div>
                     <div class="form-group">
-                        <label for="assignment-planned-hours">Số tiết dự kiến: <span class="text-danger">*</span></label>
-                        <input type="number" id="assignment-planned-hours" name="planned_hours" class="form-control" min="1" max="200" value="45" required>
+                        <label for="assignment-actual-hours">Số tiết thực tế:</label>
+                        <input type="number" id="assignment-actual-hours" name="actual_hours" class="form-control" min="0" value="0">
+                    </div>
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label for="assignment-start-date">Ngày bắt đầu: <span class="text-danger">*</span></label>
+                                <input type="date" id="assignment-start-date" name="start_date" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label for="assignment-end-date">Ngày kết thúc: <span class="text-danger">*</span></label>
+                                <input type="date" id="assignment-end-date" name="end_date" class="form-control" required>
+                            </div>
+                        </div>
                     </div>
                 </div>
+            </div>
+            <div class="form-group">
+                <label for="assignment-notes">Ghi chú:</label>
+                <textarea id="assignment-notes" name="notes" class="form-control" rows="3" placeholder="Ghi chú về phân công..."></textarea>
             </div>
             <button type="submit" class="btn btn-success" id="submit-btn">
                 <i class="fas fa-plus"></i> Tạo phân công
@@ -75,54 +94,61 @@
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h3>Danh sách phân công giảng dạy</h3>
-        <button class="btn btn-outline-info btn-sm" onclick="refreshTeachingAssignmentsList()">
+        <button class="btn btn-info btn-sm" onclick="refreshTeachingAssignmentsList()">
             <i class="fas fa-sync-alt"></i> Làm mới
         </button>
     </div>
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-striped table-hover">
-                <thead class="thead-light">
+            <table class="table table-striped" id="teaching-assignments-table">
+                <thead>
                     <tr>
+                        <th>ID</th>
                         <th>Giảng viên</th>
                         <th>Học phần</th>
                         <th>Mã lớp</th>
                         <th>SV</th>
-                        <th>Tiết DK/TT</th>
+                        <th>Tiết (KH/TT)</th>
                         <th>Hệ số GV</th>
+                        <th>Hệ số HP</th>
+                        <th>Hệ số lớp</th>
+                        <th>Tiết quy đổi</th>
+                        <th>Thành tiền</th>
                         <th>Trạng thái</th>
                         <th>Thao tác</th>
                     </tr>
                 </thead>
-                <tbody id="teaching-assignments-tbody">
+                <tbody>
                     {% for assignment in teaching_assignments %}
-                    <tr data-assignment-id="{{ assignment.id }}">
-                        <td>{{ assignment.teacher.name if assignment.teacher else 'N/A' }}</td>
-                        <td>{{ assignment.subject.name if assignment.subject else 'N/A' }}</td>
-                        <td><span class="badge badge-primary">{{ assignment.class_code }}</span></td>
+                    <tr>
+                        <td>{{ assignment.id }}</td>
+                        <td>{{ assignment.teacher_name }}</td>
+                        <td>{{ assignment.subject_name }}</td>
+                        <td>{{ assignment.class_code }}</td>
                         <td>{{ assignment.class_student_count }}</td>
                         <td>{{ assignment.planned_hours }}/{{ assignment.actual_hours }}</td>
                         <td>{{ "%.2f"|format(assignment.effective_teacher_coefficient) }}</td>
+                        <td>{{ "%.2f"|format(assignment.effective_subject_coefficient) }}</td>
+                        <td>{{ "%.2f"|format(assignment.class_coefficient) }}</td>
+                        <td>{{ "%.2f"|format(assignment.calculated_adjusted_hours) }}</td>
+                        <td>{{ "{:,.0f}".format(assignment.calculated_amount) }} VND</td>
                         <td>
                             <span class="badge badge-{{ 'success' if assignment.is_approved else 'warning' }}">
                                 {{ 'Đã duyệt' if assignment.is_approved else 'Chờ duyệt' }}
                             </span>
                         </td>
                         <td>
-                            <button class="btn btn-outline-warning btn-sm" onclick="updateHours({{ assignment.id }})" title="Cập nhật tiết">
-                                <i class="fas fa-edit"></i>
+                            <button class="btn btn-warning btn-sm" onclick="editAssignment({{ assignment.id }})">
+                                <i class="fas fa-edit"></i> Sửa
                             </button>
-                            <button class="btn btn-outline-danger btn-sm" onclick="deleteAssignment({{ assignment.id }})" title="Xóa">
-                                <i class="fas fa-trash"></i>
+                            <button class="btn btn-danger btn-sm" onclick="deleteAssignment({{ assignment.id }})">
+                                <i class="fas fa-trash"></i> Xóa
                             </button>
                         </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="8" class="text-center text-muted py-4">
-                            <i class="fas fa-inbox fa-2x mb-2"></i>
-                            <br>Chưa có phân công nào
-                        </td>
+                        <td colspan="13" class="text-center">Chưa có phân công nào</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -131,6 +157,317 @@
     </div>
 </div>
 
-<script src="{{ url_for('static', filename='js/teaching_assignments.js') }}"></script>
-<script src="{{ url_for('static', filename='js/common.js') }}"></script>
+<div id="edit-assignment-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; width: 600px; max-height: 80vh; overflow-y: auto;">
+        <h4>Chỉnh sửa phân công giảng dạy</h4>
+        <form id="edit-assignment-form">
+            <input type="hidden" id="edit-assignment-id">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="edit-assignment-actual-hours">Số tiết thực tế:</label>
+                        <input type="number" id="edit-assignment-actual-hours" class="form-control" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-assignment-student-count">Số sinh viên:</label>
+                        <input type="number" id="edit-assignment-student-count" class="form-control" min="1" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="edit-assignment-notes">Ghi chú:</label>
+                        <textarea id="edit-assignment-notes" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div id="edit-calculation-preview" class="alert alert-info" style="display: none;">
+                <!-- Preview calculation will be shown here -->
+            </div>
+            <button type="submit" class="btn btn-success">Cập nhật</button>
+            <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Hủy</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let isSubmitting = false;
+    let currentAssignmentData = null;
+
+    // Handle form submission
+    document.getElementById('teaching-assignment-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (isSubmitting) return;
+        isSubmitting = true;
+        
+        const submitBtn = document.getElementById('submit-btn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang tạo...';
+        
+        const formData = {
+            teacher_id: parseInt(document.getElementById('assignment-teacher').value),
+            subject_id: parseInt(document.getElementById('assignment-subject').value),
+            semester_id: document.getElementById('assignment-semester').value ? 
+                         parseInt(document.getElementById('assignment-semester').value) : null,
+            class_code: document.getElementById('assignment-class-code').value,
+            class_student_count: parseInt(document.getElementById('assignment-student-count').value),
+            planned_hours: parseInt(document.getElementById('assignment-planned-hours').value),
+            actual_hours: parseInt(document.getElementById('assignment-actual-hours').value),
+            start_date: document.getElementById('assignment-start-date').value,
+            end_date: document.getElementById('assignment-end-date').value,
+            notes: document.getElementById('assignment-notes').value
+        };
+
+        fetch('/api/teaching-assignments', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('Phân công giảng dạy đã được tạo thành công!', 'success');
+                document.getElementById('teaching-assignment-form').reset();
+                
+                // Reset default dates
+                const today = new Date();
+                document.getElementById('assignment-start-date').value = today.toISOString().split('T')[0];
+                const endDate = new Date(today.getTime() + (120 * 24 * 60 * 60 * 1000));
+                document.getElementById('assignment-end-date').value = endDate.toISOString().split('T')[0];
+                
+                refreshTeachingAssignmentsList();
+            } else {
+                showAlert('Lỗi: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+        })
+        .finally(() => {
+            isSubmitting = false;
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-plus"></i> Tạo phân công';
+        });
+    });
+
+    function refreshTeachingAssignmentsList() {
+        fetch('/api/teaching-assignments/list')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateTeachingAssignmentsTable(data.teaching_assignments);
+            }
+        })
+        .catch(error => {
+            console.error('Error refreshing teaching assignments list:', error);
+        });
+    }
+
+    function updateTeachingAssignmentsTable(assignments) {
+        const tbody = document.querySelector('#teaching-assignments-table tbody');
+        tbody.innerHTML = '';
+        
+        if (assignments.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="13" style="text-align: center;">Chưa có phân công nào</td></tr>';
+            return;
+        }
+        
+        assignments.forEach(assignment => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${assignment.id}</td>
+                <td>${assignment.teacher_name}</td>
+                <td>${assignment.subject_name}</td>
+                <td>${assignment.class_code}</td>
+                <td>${assignment.class_student_count}</td>
+                <td>${assignment.planned_hours}/${assignment.actual_hours}</td>
+                <td>${assignment.effective_teacher_coefficient.toFixed(2)}</td>
+                <td>${assignment.effective_subject_coefficient.toFixed(2)}</td>
+                <td>${assignment.class_coefficient.toFixed(2)}</td>
+                <td>${assignment.calculated_adjusted_hours.toFixed(2)}</td>
+                <td>${assignment.calculated_amount.toLocaleString()} VND</td>
+                <td>
+                    <span class="badge badge-${assignment.is_approved ? 'success' : 'warning'}">
+                        ${assignment.is_approved ? 'Đã duyệt' : 'Chờ duyệt'}
+                    </span>
+                </td>
+                <td>
+                    <button class="btn btn-warning btn-sm" onclick="editAssignment(${assignment.id})">
+                        <i class="fas fa-edit"></i> Sửa
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteAssignment(${assignment.id})">
+                        <i class="fas fa-trash"></i> Xóa
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    function editAssignment(id) {
+        fetch(`/api/teaching-assignments/${id}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const assignment = data.assignment;
+                document.getElementById('edit-assignment-id').value = assignment.id;
+                document.getElementById('edit-assignment-actual-hours').value = assignment.actual_hours;
+                document.getElementById('edit-assignment-student-count').value = assignment.class_student_count;
+                document.getElementById('edit-assignment-notes').value = assignment.notes || '';
+                
+                currentAssignmentData = {
+                    id: assignment.id,
+                    teacherCoeff: assignment.effective_teacher_coefficient,
+                    subjectCoeff: assignment.effective_subject_coefficient,
+                    hourlyRate: 100000
+                };
+                
+                updatePreviewCalculation();
+                document.getElementById('edit-assignment-modal').style.display = 'block';
+            } else {
+                showAlert('Lỗi: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+        });
+    }
+
+    function closeEditModal() {
+        document.getElementById('edit-assignment-modal').style.display = 'none';
+        currentAssignmentData = null;
+    }
+
+    // Handle edit form submission
+    document.getElementById('edit-assignment-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const id = document.getElementById('edit-assignment-id').value;
+        const formData = {
+            actual_hours: parseInt(document.getElementById('edit-assignment-actual-hours').value),
+            class_student_count: parseInt(document.getElementById('edit-assignment-student-count').value),
+            notes: document.getElementById('edit-assignment-notes').value
+        };
+
+        fetch(`/api/teaching-assignments/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('Phân công đã được cập nhật thành công!', 'success');
+                closeEditModal();
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                showAlert('Lỗi: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+        });
+    });
+
+    function deleteAssignment(id) {
+        if (confirm('Bạn có chắc chắn muốn xóa phân công này?')) {
+            fetch(`/api/teaching-assignments/${id}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('Phân công đã được xóa thành công!', 'success');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showAlert('Lỗi: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+            });
+        }
+    }
+
+    function calculateClassCoefficient(studentCount) {
+        if (studentCount < 20) return -0.3;
+        if (studentCount <= 29) return -0.2;
+        if (studentCount <= 39) return -0.1;
+        if (studentCount <= 49) return 0.0;
+        if (studentCount <= 59) return 0.1;
+        if (studentCount <= 69) return 0.2;
+        if (studentCount <= 79) return 0.3;
+        return 0.4;
+    }
+
+    function updatePreviewCalculation() {
+        const actualHours = parseInt(document.getElementById('edit-assignment-actual-hours').value) || 0;
+        const studentCount = parseInt(document.getElementById('edit-assignment-student-count').value) || 0;
+        
+        if (currentAssignmentData) {
+            const teacherCoeff = currentAssignmentData.teacherCoeff;
+            const subjectCoeff = currentAssignmentData.subjectCoeff;
+            const hourlyRate = currentAssignmentData.hourlyRate;
+            const classCoeff = calculateClassCoefficient(studentCount);
+            
+            const adjustedHours = actualHours * (subjectCoeff + classCoeff);
+            const totalAmount = adjustedHours * teacherCoeff * hourlyRate;
+            
+            document.getElementById('edit-calculation-preview').innerHTML = `
+                <h6><i class="fas fa-calculator"></i> Dự tính tính toán mới:</h6>
+                <div class="row">
+                    <div class="col-6">
+                        <p><strong>Hệ số GV:</strong> ${teacherCoeff.toFixed(2)}</p>
+                        <p><strong>Hệ số HP:</strong> ${subjectCoeff.toFixed(2)}</p>
+                        <p><strong>Hệ số lớp:</strong> <span class="badge badge-${classCoeff >= 0 ? 'success' : 'warning'}">${classCoeff.toFixed(2)}</span></p>
+                    </div>
+                    <div class="col-6">
+                        <p><strong>Tiết quy đổi:</strong> ${adjustedHours.toFixed(2)}</p>
+                        <p><strong>Tổng tiền:</strong> <strong class="text-success">${totalAmount.toLocaleString()} VND</strong></p>
+                    </div>
+                </div>
+            `;
+            document.getElementById('edit-calculation-preview').style.display = 'block';
+        }
+    }
+
+    // Event listeners for preview calculation
+    document.getElementById('edit-assignment-actual-hours').addEventListener('input', updatePreviewCalculation);
+    document.getElementById('edit-assignment-student-count').addEventListener('input', updatePreviewCalculation);
+
+    function showAlert(message, type) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="close" data-dismiss="alert">
+                <span>&times;</span>
+            </button>
+        `;
+        document.querySelector('.content').insertBefore(alertDiv, document.querySelector('.content').firstChild);
+        
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 5000);
+    }
+
+    // Set default dates on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const today = new Date();
+        document.getElementById('assignment-start-date').value = today.toISOString().split('T')[0];
+        
+        const endDate = new Date(today.getTime() + (120 * 24 * 60 * 60 * 1000));
+        document.getElementById('assignment-end-date').value = endDate.toISOString().split('T')[0];
+    });
+</script>
 {% endblock %}
