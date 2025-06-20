@@ -1926,6 +1926,325 @@ def api_get_semesters_list():
         traceback.print_exc()
         return jsonify({'success': False, 'message': str(e)})
 
+# Reports Routes
+@app.route('/reports')
+def reports():
+    try:
+        teachers_list = []
+        departments_list = []
+        semesters_list = []
+        years_list = []
+        
+        if 'Teacher' in globals():
+            teachers_list = Teacher.query.filter_by(is_active=True).order_by(Teacher.name).all()
+        if 'Department' in globals():
+            departments_list = Department.query.filter_by(is_active=True).order_by(Department.name).all()
+        if 'Semester' in globals():
+            semesters_list = Semester.query.filter_by(is_active=True).order_by(Semester.year.desc(), Semester.name).all()
+            # Get unique years
+            years_query = db.session.query(Semester.year).filter_by(is_active=True).distinct().order_by(Semester.year.desc()).all()
+            years_list = [year[0] for year in years_query]
+        
+        current_year = datetime.now().year
+        if current_year not in years_list:
+            years_list.insert(0, current_year)
+        
+        return render_template('reports.html',
+                             teachers=teachers_list,
+                             departments=departments_list,
+                             semesters=semesters_list,
+                             years=years_list,
+                             current_year=current_year)
+    except Exception as e:
+        print(f"Error in reports route: {e}")
+        return render_template('reports.html', 
+                             teachers=[], departments=[], semesters=[], years=[], current_year=datetime.now().year)
+
+# API Routes for Reports
+@app.route('/api/reports/teacher-yearly', methods=['POST'])
+def api_teacher_yearly_report():
+    try:
+        data = request.get_json()
+        teacher_id = data.get('teacher_id')
+        year = data.get('year')
+        
+        if not teacher_id or not year:
+            return jsonify({'success': False, 'message': 'Vui lòng chọn giảng viên và năm'})
+        
+        # Get teacher info
+        teacher = Teacher.query.get(teacher_id)
+        if not teacher:
+            return jsonify({'success': False, 'message': 'Không tìm thấy giảng viên'})
+        
+        # Get department name
+        department_name = 'N/A'
+        if teacher.department_id:
+            department = Department.query.get(teacher.department_id)
+            if department:
+                department_name = department.name
+        
+        # Get semesters in the year
+        semesters = Semester.query.filter_by(year=int(year), is_active=True).all()
+        
+        report_data = {
+            'teacher_info': {
+                'id': teacher.id,
+                'name': teacher.name,
+                'employee_code': teacher.employee_code or '',
+                'department_name': department_name
+            },
+            'year': int(year),
+            'semesters': [],
+            'total_hours': 0,
+            'total_adjusted_hours': 0,
+            'total_amount': 0
+        }
+        
+        # Calculate for each semester
+        for semester in semesters:
+            semester_data = calculate_teacher_salary_detailed(teacher_id, semester.id)
+            
+            if 'error' not in semester_data:
+                semester_info = {
+                    'semester_id': semester.id,
+                    'semester_name': semester.name,
+                    'total_hours': semester_data.get('total_hours', 0),
+                    'adjusted_hours': semester_data.get('adjusted_hours', 0),
+                    'total_amount': semester_data.get('total_amount', 0),
+                    'assignments': semester_data.get('assignments', [])
+                }
+                
+                report_data['semesters'].append(semester_info)
+                report_data['total_hours'] += semester_info['total_hours']
+                report_data['total_adjusted_hours'] += semester_info['adjusted_hours']
+                report_data['total_amount'] += semester_info['total_amount']
+        
+        return jsonify({'success': True, 'report': report_data})
+        
+    except Exception as e:
+        print(f"Error generating teacher yearly report: {e}")
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/reports/department-salary', methods=['POST'])
+def api_department_salary_report():
+    try:
+        data = request.get_json()
+        department_id = data.get('department_id')
+        semester_id = data.get('semester_id')
+        year = data.get('year')
+        
+        if not department_id:
+            return jsonify({'success': False, 'message': 'Vui lòng chọn khoa'})
+        
+        # Get department info
+        department = Department.query.get(department_id)
+        if not department:
+            return jsonify({'success': False, 'message': 'Không tìm thấy khoa'})
+        
+        # Get teachers in department
+        teachers = Teacher.query.filter_by(department_id=department_id, is_active=True).all()
+        
+        report_data = {
+            'department_info': {
+                'id': department.id,
+                'name': department.name,
+                'code': department.code
+            },
+            'period_info': {},
+            'teachers': [],
+            'total_hours': 0,
+            'total_adjusted_hours': 0,
+            'total_amount': 0
+        }
+        
+        # Set period info
+        if semester_id:
+            semester = Semester.query.get(semester_id)
+            if semester:
+                report_data['period_info'] = {
+                    'type': 'semester',
+                    'semester_name': semester.name,
+                    'year': semester.year
+                }
+        elif year:
+            report_data['period_info'] = {
+                'type': 'year',
+                'year': int(year)
+            }
+        
+        # Calculate for each teacher
+        for teacher in teachers:
+            if semester_id:
+                # Calculate for specific semester
+                teacher_data = calculate_teacher_salary_detailed(teacher.id, semester_id)
+            elif year:
+                # Calculate for whole year
+                teacher_data = calculate_teacher_yearly_salary(teacher.id, int(year))
+            else:
+                # Calculate for all time
+                teacher_data = calculate_teacher_salary_detailed(teacher.id)
+            
+            if 'error' not in teacher_data:
+                teacher_info = {
+                    'teacher_id': teacher.id,
+                    'teacher_name': teacher.name,
+                    'employee_code': teacher.employee_code or '',
+                    'total_hours': teacher_data.get('total_hours', 0),
+                    'adjusted_hours': teacher_data.get('adjusted_hours', 0),
+                    'total_amount': teacher_data.get('total_amount', 0),
+                    'assignments_count': len(teacher_data.get('assignments', []))
+                }
+                
+                report_data['teachers'].append(teacher_info)
+                report_data['total_hours'] += teacher_info['total_hours']
+                report_data['total_adjusted_hours'] += teacher_info['adjusted_hours']
+                report_data['total_amount'] += teacher_info['total_amount']
+        
+        # Sort teachers by total amount (descending)
+        report_data['teachers'].sort(key=lambda x: x['total_amount'], reverse=True)
+        
+        return jsonify({'success': True, 'report': report_data})
+        
+    except Exception as e:
+        print(f"Error generating department salary report: {e}")
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/reports/school-salary', methods=['POST'])
+def api_school_salary_report():
+    try:
+        data = request.get_json()
+        semester_id = data.get('semester_id')
+        year = data.get('year')
+        
+        # Get all departments
+        departments = Department.query.filter_by(is_active=True).order_by(Department.name).all()
+        
+        report_data = {
+            'period_info': {},
+            'departments': [],
+            'total_hours': 0,
+            'total_adjusted_hours': 0,
+            'total_amount': 0,
+            'total_teachers': 0
+        }
+        
+        # Set period info
+        if semester_id:
+            semester = Semester.query.get(semester_id)
+            if semester:
+                report_data['period_info'] = {
+                    'type': 'semester',
+                    'semester_name': semester.name,
+                    'year': semester.year
+                }
+        elif year:
+            report_data['period_info'] = {
+                'type': 'year',
+                'year': int(year)
+            }
+        
+        # Calculate for each department
+        for department in departments:
+            teachers = Teacher.query.filter_by(department_id=department.id, is_active=True).all()
+            
+            dept_data = {
+                'department_id': department.id,
+                'department_name': department.name,
+                'department_code': department.code,
+                'teachers_count': len(teachers),
+                'total_hours': 0,
+                'total_adjusted_hours': 0,
+                'total_amount': 0,
+                'top_teachers': []
+            }
+            
+            # Calculate for each teacher in department
+            teacher_amounts = []
+            for teacher in teachers:
+                if semester_id:
+                    teacher_data = calculate_teacher_salary_detailed(teacher.id, semester_id)
+                elif year:
+                    teacher_data = calculate_teacher_yearly_salary(teacher.id, int(year))
+                else:
+                    teacher_data = calculate_teacher_salary_detailed(teacher.id)
+                
+                if 'error' not in teacher_data:
+                    teacher_amount = teacher_data.get('total_amount', 0)
+                    teacher_hours = teacher_data.get('total_hours', 0)
+                    teacher_adjusted_hours = teacher_data.get('adjusted_hours', 0)
+                    
+                    dept_data['total_hours'] += teacher_hours
+                    dept_data['total_adjusted_hours'] += teacher_adjusted_hours
+                    dept_data['total_amount'] += teacher_amount
+                    
+                    if teacher_amount > 0:
+                        teacher_amounts.append({
+                            'name': teacher.name,
+                            'employee_code': teacher.employee_code or '',
+                            'amount': teacher_amount
+                        })
+            
+            # Get top 3 teachers by amount
+            teacher_amounts.sort(key=lambda x: x['amount'], reverse=True)
+            dept_data['top_teachers'] = teacher_amounts[:3]
+            
+            if dept_data['total_amount'] > 0 or dept_data['teachers_count'] > 0:
+                report_data['departments'].append(dept_data)
+                report_data['total_hours'] += dept_data['total_hours']
+                report_data['total_adjusted_hours'] += dept_data['total_adjusted_hours']
+                report_data['total_amount'] += dept_data['total_amount']
+                report_data['total_teachers'] += dept_data['teachers_count']
+        
+        # Sort departments by total amount (descending)
+        report_data['departments'].sort(key=lambda x: x['total_amount'], reverse=True)
+        
+        return jsonify({'success': True, 'report': report_data})
+        
+    except Exception as e:
+        print(f"Error generating school salary report: {e}")
+        return jsonify({'success': False, 'message': str(e)})
+
+def calculate_teacher_yearly_salary(teacher_id, year):
+    """Calculate teacher salary for entire year"""
+    try:
+        teacher = Teacher.query.get(teacher_id)
+        if not teacher:
+            return {'error': 'Không tìm thấy giảng viên'}
+        
+        # Get all semesters in year
+        semesters = Semester.query.filter_by(year=year, is_active=True).all()
+        
+        total_hours = 0
+        total_adjusted_hours = 0
+        all_assignments = []
+        
+        for semester in semesters:
+            semester_data = calculate_teacher_salary_detailed(teacher_id, semester.id)
+            if 'error' not in semester_data:
+                total_hours += semester_data.get('total_hours', 0)
+                total_adjusted_hours += semester_data.get('adjusted_hours', 0)
+                all_assignments.extend(semester_data.get('assignments', []))
+        
+        # Calculate total amount
+        settings = get_default_salary_settings()
+        teacher_coeff = teacher.effective_teacher_coefficient if hasattr(teacher, 'effective_teacher_coefficient') else 1.5
+        base_rate = settings['base_hourly_rate']
+        total_amount = total_adjusted_hours * teacher_coeff * base_rate
+        
+        return {
+            'teacher_id': teacher_id,
+            'teacher_name': teacher.name,
+            'total_hours': total_hours,
+            'adjusted_hours': total_adjusted_hours,
+            'total_amount': total_amount,
+            'base_hourly_rate': base_rate,
+            'teacher_coefficient': teacher_coeff,
+            'assignments': all_assignments
+        }
+    except Exception as e:
+        print(f"Error calculating yearly salary: {e}")
+        return {'error': str(e)}
+
 # Make sure app runs
 if __name__ == '__main__':
     try:

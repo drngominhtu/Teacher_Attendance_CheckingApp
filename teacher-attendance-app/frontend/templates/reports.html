@@ -1,0 +1,624 @@
+{% extends "base.html" %}
+
+{% block title %}Báo cáo{% endblock %}
+{% block page_title %}Báo cáo tiền dạy{% endblock %}
+{% block breadcrumb %}Trang chủ / Báo cáo{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Teacher Yearly Report -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="fas fa-user-graduate"></i> Báo cáo tiền dạy giảng viên theo năm</h4>
+            </div>
+            <div class="card-body">
+                <form id="teacher-yearly-form">
+                    <div class="form-group">
+                        <label for="teacher-select">Giảng viên:</label>
+                        <select id="teacher-select" class="form-control" required>
+                            <option value="">Chọn giảng viên</option>
+                            {% for teacher in teachers %}
+                            <option value="{{ teacher.id }}">{{ teacher.name }} ({{ teacher.employee_code or 'N/A' }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="year-select">Năm học:</label>
+                        <select id="year-select" class="form-control" required>
+                            <option value="">Chọn năm</option>
+                            {% for year in years %}
+                            <option value="{{ year }}" {% if year == current_year %}selected{% endif %}>{{ year }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-chart-line"></i> Tạo báo cáo
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Department Report -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="fas fa-building"></i> Báo cáo tiền dạy theo khoa</h4>
+            </div>
+            <div class="card-body">
+                <form id="department-report-form">
+                    <div class="form-group">
+                        <label for="department-select">Khoa:</label>
+                        <select id="department-select" class="form-control" required>
+                            <option value="">Chọn khoa</option>
+                            {% for dept in departments %}
+                            <option value="{{ dept.id }}">{{ dept.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Thời gian:</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="period-type" id="period-semester" value="semester" checked>
+                            <label class="form-check-label" for="period-semester">Theo kỳ học</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="period-type" id="period-year" value="year">
+                            <label class="form-check-label" for="period-year">Theo năm học</label>
+                        </div>
+                    </div>
+                    <div class="form-group" id="semester-group">
+                        <label for="semester-select">Kỳ học:</label>
+                        <select id="semester-select" class="form-control">
+                            <option value="">Chọn kỳ học</option>
+                            {% for semester in semesters %}
+                            <option value="{{ semester.id }}">{{ semester.name }} - {{ semester.year }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group" id="year-group" style="display: none;">
+                        <label for="dept-year-select">Năm học:</label>
+                        <select id="dept-year-select" class="form-control">
+                            <option value="">Chọn năm</option>
+                            {% for year in years %}
+                            <option value="{{ year }}" {% if year == current_year %}selected{% endif %}>{{ year }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-info">
+                        <i class="fas fa-chart-bar"></i> Tạo báo cáo
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- School Report -->
+<div class="card mt-3">
+    <div class="card-header">
+        <h4><i class="fas fa-school"></i> Báo cáo tiền dạy toàn trường</h4>
+    </div>
+    <div class="card-body">
+        <form id="school-report-form" class="row">
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label>Thời gian:</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="school-period-type" id="school-period-semester" value="semester" checked>
+                        <label class="form-check-label" for="school-period-semester">Theo kỳ học</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="school-period-type" id="school-period-year" value="year">
+                        <label class="form-check-label" for="school-period-year">Theo năm học</label>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4" id="school-semester-group">
+                <div class="form-group">
+                    <label for="school-semester-select">Kỳ học:</label>
+                    <select id="school-semester-select" class="form-control">
+                        <option value="">Chọn kỳ học</option>
+                        {% for semester in semesters %}
+                        <option value="{{ semester.id }}">{{ semester.name }} - {{ semester.year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-4" id="school-year-group" style="display: none;">
+                <div class="form-group">
+                    <label for="school-year-select">Năm học:</label>
+                    <select id="school-year-select" class="form-control">
+                        <option value="">Chọn năm</option>
+                        {% for year in years %}
+                        <option value="{{ year }}" {% if year == current_year %}selected{% endif %}>{{ year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-12">
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-chart-pie"></i> Tạo báo cáo toàn trường
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Report Results -->
+<div id="report-results" style="display: none;">
+    <div class="card mt-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 id="report-title">Kết quả báo cáo</h4>
+            <div>
+                <button class="btn btn-outline-success btn-sm" onclick="exportToExcel()">
+                    <i class="fas fa-file-excel"></i> Xuất Excel
+                </button>
+                <button class="btn btn-outline-primary btn-sm" onclick="printReport()">
+                    <i class="fas fa-print"></i> In báo cáo
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div id="report-content"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Toggle period type forms
+    document.querySelectorAll('input[name="period-type"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const semesterGroup = document.getElementById('semester-group');
+            const yearGroup = document.getElementById('year-group');
+            
+            if (this.value === 'semester') {
+                semesterGroup.style.display = 'block';
+                yearGroup.style.display = 'none';
+            } else {
+                semesterGroup.style.display = 'none';
+                yearGroup.style.display = 'block';
+            }
+        });
+    });
+
+    document.querySelectorAll('input[name="school-period-type"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const semesterGroup = document.getElementById('school-semester-group');
+            const yearGroup = document.getElementById('school-year-group');
+            
+            if (this.value === 'semester') {
+                semesterGroup.style.display = 'block';
+                yearGroup.style.display = 'none';
+            } else {
+                semesterGroup.style.display = 'none';
+                yearGroup.style.display = 'block';
+            }
+        });
+    });
+
+    // Teacher yearly report
+    document.getElementById('teacher-yearly-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const teacherId = document.getElementById('teacher-select').value;
+        const year = document.getElementById('year-select').value;
+        
+        if (!teacherId || !year) {
+            showAlert('Vui lòng chọn giảng viên và năm', 'error');
+            return;
+        }
+        
+        generateTeacherYearlyReport(teacherId, year);
+    });
+
+    // Department report
+    document.getElementById('department-report-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const departmentId = document.getElementById('department-select').value;
+        const periodType = document.querySelector('input[name="period-type"]:checked').value;
+        
+        if (!departmentId) {
+            showAlert('Vui lòng chọn khoa', 'error');
+            return;
+        }
+        
+        let semesterId = null;
+        let year = null;
+        
+        if (periodType === 'semester') {
+            semesterId = document.getElementById('semester-select').value;
+            if (!semesterId) {
+                showAlert('Vui lòng chọn kỳ học', 'error');
+                return;
+            }
+        } else {
+            year = document.getElementById('dept-year-select').value;
+            if (!year) {
+                showAlert('Vui lòng chọn năm', 'error');
+                return;
+            }
+        }
+        
+        generateDepartmentReport(departmentId, semesterId, year);
+    });
+
+    // School report
+    document.getElementById('school-report-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const periodType = document.querySelector('input[name="school-period-type"]:checked').value;
+        
+        let semesterId = null;
+        let year = null;
+        
+        if (periodType === 'semester') {
+            semesterId = document.getElementById('school-semester-select').value;
+            if (!semesterId) {
+                showAlert('Vui lòng chọn kỳ học', 'error');
+                return;
+            }
+        } else {
+            year = document.getElementById('school-year-select').value;
+            if (!year) {
+                showAlert('Vui lòng chọn năm', 'error');
+                return;
+            }
+        }
+        
+        generateSchoolReport(semesterId, year);
+    });
+
+    function generateTeacherYearlyReport(teacherId, year) {
+        fetch('/api/reports/teacher-yearly', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                teacher_id: teacherId,
+                year: year
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayTeacherYearlyReport(data.report);
+            } else {
+                showAlert('Lỗi: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+        });
+    }
+
+    function generateDepartmentReport(departmentId, semesterId, year) {
+        fetch('/api/reports/department-salary', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                department_id: departmentId,
+                semester_id: semesterId,
+                year: year
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayDepartmentReport(data.report);
+            } else {
+                showAlert('Lỗi: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+        });
+    }
+
+    function generateSchoolReport(semesterId, year) {
+        fetch('/api/reports/school-salary', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                semester_id: semesterId,
+                year: year
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displaySchoolReport(data.report);
+            } else {
+                showAlert('Lỗi: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+        });
+    }
+
+    function displayTeacherYearlyReport(report) {
+        const title = `Báo cáo tiền dạy - ${report.teacher_info.name} - Năm ${report.year}`;
+        document.getElementById('report-title').textContent = title;
+        
+        let html = `
+            <div class="report-header">
+                <h5>Thông tin giảng viên</h5>
+                <p><strong>Họ tên:</strong> ${report.teacher_info.name}</p>
+                <p><strong>Mã GV:</strong> ${report.teacher_info.employee_code}</p>
+                <p><strong>Khoa:</strong> ${report.teacher_info.department_name}</p>
+                <p><strong>Năm học:</strong> ${report.year}</p>
+            </div>
+            <hr>
+            
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Kỳ học</th>
+                            <th>Số tiết thực dạy</th>
+                            <th>Số tiết quy đổi</th>
+                            <th>Thành tiền</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        report.semesters.forEach(semester => {
+            html += `
+                <tr>
+                    <td>${semester.semester_name}</td>
+                    <td class="text-right">${semester.total_hours.toFixed(1)}</td>
+                    <td class="text-right">${semester.adjusted_hours.toFixed(1)}</td>
+                    <td class="text-right">${formatCurrency(semester.total_amount)}</td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                    </tbody>
+                    <tfoot class="font-weight-bold">
+                        <tr class="table-info">
+                            <td>TỔNG CỘNG</td>
+                            <td class="text-right">${report.total_hours.toFixed(1)}</td>
+                            <td class="text-right">${report.total_adjusted_hours.toFixed(1)}</td>
+                            <td class="text-right">${formatCurrency(report.total_amount)}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        `;
+        
+        document.getElementById('report-content').innerHTML = html;
+        document.getElementById('report-results').style.display = 'block';
+        document.getElementById('report-results').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function displayDepartmentReport(report) {
+        const periodText = report.period_info.type === 'semester' ? 
+            `${report.period_info.semester_name} - ${report.period_info.year}` : 
+            `Năm ${report.period_info.year}`;
+        
+        const title = `Báo cáo tiền dạy khoa ${report.department_info.name} - ${periodText}`;
+        document.getElementById('report-title').textContent = title;
+        
+        let html = `
+            <div class="report-header">
+                <h5>Thông tin khoa</h5>
+                <p><strong>Khoa:</strong> ${report.department_info.name}</p>
+                <p><strong>Mã khoa:</strong> ${report.department_info.code}</p>
+                <p><strong>Thời gian:</strong> ${periodText}</p>
+                <p><strong>Số giảng viên:</strong> ${report.teachers.length}</p>
+            </div>
+            <hr>
+            
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>STT</th>
+                            <th>Họ tên</th>
+                            <th>Mã GV</th>
+                            <th>Số tiết thực dạy</th>
+                            <th>Số tiết quy đổi</th>
+                            <th>Thành tiền</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        report.teachers.forEach((teacher, index) => {
+            html += `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${teacher.teacher_name}</td>
+                    <td>${teacher.employee_code}</td>
+                    <td class="text-right">${teacher.total_hours.toFixed(1)}</td>
+                    <td class="text-right">${teacher.adjusted_hours.toFixed(1)}</td>
+                    <td class="text-right">${formatCurrency(teacher.total_amount)}</td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                    </tbody>
+                    <tfoot class="font-weight-bold">
+                        <tr class="table-info">
+                            <td colspan="3">TỔNG CỘNG</td>
+                            <td class="text-right">${report.total_hours.toFixed(1)}</td>
+                            <td class="text-right">${report.total_adjusted_hours.toFixed(1)}</td>
+                            <td class="text-right">${formatCurrency(report.total_amount)}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        `;
+        
+        document.getElementById('report-content').innerHTML = html;
+        document.getElementById('report-results').style.display = 'block';
+        document.getElementById('report-results').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function displaySchoolReport(report) {
+        const periodText = report.period_info.type === 'semester' ? 
+            `${report.period_info.semester_name} - ${report.period_info.year}` : 
+            `Năm ${report.period_info.year}`;
+        
+        const title = `Báo cáo tiền dạy toàn trường - ${periodText}`;
+        document.getElementById('report-title').textContent = title;
+        
+        let html = `
+            <div class="report-header">
+                <h5>Tổng quan toàn trường</h5>
+                <p><strong>Thời gian:</strong> ${periodText}</p>
+                <p><strong>Tổng số khoa:</strong> ${report.departments.length}</p>
+                <p><strong>Tổng số giảng viên:</strong> ${report.total_teachers}</p>
+                <p><strong>Tổng tiền dạy:</strong> ${formatCurrency(report.total_amount)}</p>
+            </div>
+            <hr>
+            
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>STT</th>
+                            <th>Khoa</th>
+                            <th>Số GV</th>
+                            <th>Tổng tiết thực dạy</th>
+                            <th>Tổng tiết quy đổi</th>
+                            <th>Tổng tiền dạy</th>
+                            <th>Top 3 GV</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        report.departments.forEach((dept, index) => {
+            const topTeachers = dept.top_teachers.map(t => 
+                `${t.name} (${formatCurrency(t.amount)})`
+            ).join('<br>');
+            
+            html += `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${dept.department_name}</td>
+                    <td class="text-center">${dept.teachers_count}</td>
+                    <td class="text-right">${dept.total_hours.toFixed(1)}</td>
+                    <td class="text-right">${dept.total_adjusted_hours.toFixed(1)}</td>
+                    <td class="text-right">${formatCurrency(dept.total_amount)}</td>
+                    <td class="small">${topTeachers}</td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                    </tbody>
+                    <tfoot class="font-weight-bold">
+                        <tr class="table-info">
+                            <td colspan="2">TỔNG CỘNG</td>
+                            <td class="text-center">${report.total_teachers}</td>
+                            <td class="text-right">${report.total_hours.toFixed(1)}</td>
+                            <td class="text-right">${report.total_adjusted_hours.toFixed(1)}</td>
+                            <td class="text-right">${formatCurrency(report.total_amount)}</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        `;
+        
+        document.getElementById('report-content').innerHTML = html;
+        document.getElementById('report-results').style.display = 'block';
+        document.getElementById('report-results').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function formatCurrency(amount) {
+        return new Intl.NumberFormat('vi-VN', {
+            style: 'currency',
+            currency: 'VND'
+        }).format(amount);
+    }
+
+    function exportToExcel() {
+        // Simple export using HTML table to CSV
+        const table = document.querySelector('#report-content table');
+        if (!table) {
+            showAlert('Không có dữ liệu để xuất', 'error');
+            return;
+        }
+        
+        let csv = '';
+        const rows = table.querySelectorAll('tr');
+        
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('th, td');
+            const rowData = Array.from(cells).map(cell => {
+                return '"' + cell.textContent.replace(/"/g, '""') + '"';
+            }).join(',');
+            csv += rowData + '\n';
+        });
+        
+        const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'bao_cao_tien_day.csv';
+        link.click();
+    }
+
+    function printReport() {
+        const reportContent = document.getElementById('report-content').innerHTML;
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Báo cáo tiền dạy</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; }
+                        table { width: 100%; border-collapse: collapse; }
+                        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                        th { background-color: #f5f5f5; }
+                        .text-right { text-align: right; }
+                        .text-center { text-align: center; }
+                        .font-weight-bold { font-weight: bold; }
+                        .table-info { background-color: #d1ecf1; }
+                    </style>
+                </head>
+                <body>
+                    <h2>${document.getElementById('report-title').textContent}</h2>
+                    ${reportContent}
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+    }
+
+    function showAlert(message, type) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        `;
+        document.querySelector('.content').insertBefore(alertDiv, document.querySelector('.content').firstChild);
+        
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 5000);
+    }
+</script>
+{% endblock %}
