@@ -6,21 +6,20 @@ import sqlite3
 
 def migrate_database():
     """Run database migration"""
-    # Cấu hình đường dẫn
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    instance_dir = os.path.join(current_dir, 'instance')
-    database_path = os.path.join(instance_dir, 'teacher_attendance.db')
-    
-    # Tạo thư mục instance nếu chưa có
-    if not os.path.exists(instance_dir):
-        os.makedirs(instance_dir)
-    
-    # Kết nối database
-    conn = sqlite3.connect(database_path)
-    cursor = conn.cursor()
-    
     try:
-        print("Bắt đầu migration v3...")
+        print("🔄 Starting database migration...")
+        
+        # Define the path to your SQLite database file
+        database_path = os.path.join(os.path.dirname(__file__), 'instance', 'teacher_attendance.db')
+        
+        # Create instance directory if it doesn't exist
+        instance_dir = os.path.dirname(database_path)
+        if not os.path.exists(instance_dir):
+            os.makedirs(instance_dir)
+        
+        # Connect to database
+        conn = sqlite3.connect(database_path)
+        cursor = conn.cursor()
         
         # Create basic tables only
         cursor.execute('''
@@ -74,6 +73,47 @@ def migrate_database():
             )
         ''')
         
+        # Create salary_settings table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS salary_settings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                setting_key VARCHAR(50) UNIQUE NOT NULL,
+                setting_value TEXT NOT NULL,
+                description VARCHAR(200),
+                is_active BOOLEAN DEFAULT 1,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        # Drop and recreate salary_calculations table to ensure all columns exist
+        cursor.execute('DROP TABLE IF EXISTS salary_calculations')
+        
+        # Create salary_calculations table with all required columns
+        cursor.execute('''
+            CREATE TABLE salary_calculations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                teacher_id INTEGER NOT NULL,
+                semester_id INTEGER,
+                calculation_date DATE DEFAULT (date('now')),
+                total_hours REAL DEFAULT 0,
+                adjusted_hours REAL DEFAULT 0,
+                total_amount REAL DEFAULT 0,
+                base_hourly_rate REAL DEFAULT 100000,
+                teacher_coefficient REAL DEFAULT 1.0,
+                notes TEXT,
+                is_approved BOOLEAN DEFAULT 0,
+                approved_by VARCHAR(100),
+                approved_at DATETIME,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (teacher_id) REFERENCES teachers (id),
+                FOREIGN KEY (semester_id) REFERENCES semesters (id)
+            )
+        ''')
+        
+        print("✓ Recreated salary_calculations table with all columns")
+        
         # Insert basic data
         degrees = [
             ('Đại học', 'ĐH', 1.3, 'Bằng cử nhân'),
@@ -112,11 +152,27 @@ def migrate_database():
         return True
         
     except Exception as e:
-        conn.rollback()
-        print(f"Lỗi migration: {e}")
+        print(f"❌ Migration error: {e}")
+        if conn:
+            conn.rollback()
         return False
     finally:
-        conn.close()
+        if conn:
+            conn.close()
+
+# Chỉ chạy nếu script được thực thi trực tiếp
+# if __name__ == "__main__":
+#     migrate_database()
+#         print("✓ Database migration completed successfully")
+#         return True
+        
+#     except Exception as e:
+#         print(f"❌ Migration error: {e}")
+#         if conn:
+#             conn.rollback()
+#     finally:
+#         if conn:
+#             conn.close()
 
 # Chỉ chạy nếu script được thực thi trực tiếp
 if __name__ == "__main__":

@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+
+{% block title %}Lịch sử tính tiền dạy{% endblock %}
+{% block page_title %}Lịch sử tính tiền dạy{% endblock %}
+{% block breadcrumb %}Trang chủ / Tính tiền dạy / Lịch sử{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5><i class="fas fa-history"></i> Lịch sử tính toán</h5>
+        <button class="btn btn-info btn-sm" onclick="refreshCalculationsList()">
+            <i class="fas fa-sync-alt"></i> Làm mới
+        </button>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped" id="calculations-table">
+                <thead>
+                    <tr>
+                        <th>Ngày tính</th>
+                        <th>Giảng viên</th>
+                        <th>Kỳ học</th>
+                        <th>Tổng tiết</th>
+                        <th>Tiết quy đổi</th>
+                        <th>Tổng tiền</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for calculation in calculations %}
+                    <tr>
+                        <td>{{ calculation.calculation_date or calculation.created_at[:10] if calculation.created_at else 'N/A' }}</td>
+                        <td>{{ calculation.teacher_name or 'N/A' }}</td>
+                        <td>{{ calculation.semester_name or 'Tất cả' }} - {{ calculation.semester_year or '' }}</td>
+                        <td>{{ "%.1f"|format(calculation.total_hours or 0) }}</td>
+                        <td>{{ "%.1f"|format(calculation.adjusted_hours or 0) }}</td>
+                        <td>{{ "{:,.0f}"|format(calculation.total_amount or 0) }} VNĐ</td>
+                        <td>
+                            <span class="badge badge-{{ 'success' if calculation.is_approved else 'warning' }}">
+                                {{ 'Đã duyệt' if calculation.is_approved else 'Chờ duyệt' }}
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-info btn-sm" onclick="viewCalculation({{ calculation.id }})">
+                                <i class="fas fa-eye"></i> Xem
+                            </button>
+                            {% if not calculation.is_approved %}
+                            <button class="btn btn-success btn-sm" onclick="approveCalculation({{ calculation.id }})">
+                                <i class="fas fa-check"></i> Duyệt
+                            </button>
+                            {% endif %}
+                            <button class="btn btn-danger btn-sm" onclick="deleteCalculation({{ calculation.id }})">
+                                <i class="fas fa-trash"></i> Xóa
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center">Chưa có lịch sử tính toán</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- View Calculation Detail Modal -->
+<div id="view-calculation-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; width: 700px; max-height: 80vh; overflow-y: auto;">
+        <h4>Chi tiết tính toán tiền dạy</h4>
+        <div id="calculation-details">
+            <!-- Details will be populated here -->
+        </div>
+        <button type="button" class="btn btn-secondary" onclick="closeViewModal()">Đóng</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function refreshCalculationsList() {
+        fetch('/api/salary-calculations/list')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateCalculationsTable(data.calculations);
+            } else {
+                showAlert('Lỗi: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+        });
+    }
+
+    function updateCalculationsTable(calculations) {
+        const tbody = document.querySelector('#calculations-table tbody');
+        tbody.innerHTML = '';
+        
+        if (calculations.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Chưa có lịch sử tính toán</td></tr>';
+            return;
+        }
+        
+        calculations.forEach(calc => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${calc.calculation_date || (calc.created_at ? calc.created_at.substring(0, 10) : 'N/A')}</td>
+                <td>${calc.teacher_name || 'N/A'}</td>
+                <td>${calc.semester_name || 'Tất cả'} - ${calc.semester_year || ''}</td>
+                <td>${(calc.total_hours || 0).toFixed(1)}</td>
+                <td>${(calc.adjusted_hours || 0).toFixed(1)}</td>
+                <td>${(calc.total_amount || 0).toLocaleString()} VNĐ</td>
+                <td>
+                    <span class="badge badge-${calc.is_approved ? 'success' : 'warning'}">
+                        ${calc.is_approved ? 'Đã duyệt' : 'Chờ duyệt'}
+                    </span>
+                </td>
+                <td>
+                    <button class="btn btn-info btn-sm" onclick="viewCalculation(${calc.id})">
+                        <i class="fas fa-eye"></i> Xem
+                    </button>
+                    ${!calc.is_approved ? `
+                    <button class="btn btn-success btn-sm" onclick="approveCalculation(${calc.id})">
+                        <i class="fas fa-check"></i> Duyệt
+                    </button>` : ''}
+                    <button class="btn btn-danger btn-sm" onclick="deleteCalculation(${calc.id})">
+                        <i class="fas fa-trash"></i> Xóa
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    function viewCalculation(id) {
+        fetch(`/api/salary-calculations/${id}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayCalculationDetails(data.calculation);
+                document.getElementById('view-calculation-modal').style.display = 'block';
+            } else {
+                showAlert('Lỗi: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+        });
+    }
+
+    function displayCalculationDetails(calculation) {
+        const detailsDiv = document.getElementById('calculation-details');
+        
+        detailsDiv.innerHTML = `
+            <div class="alert alert-info">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Giảng viên:</strong> ${calculation.teacher_name || 'N/A'}</p>
+                        <p><strong>Khoa:</strong> ${calculation.department_name || 'N/A'}</p>
+                        <p><strong>Kỳ học:</strong> ${calculation.semester_name || 'Tất cả'} - ${calculation.semester_year || ''}</p>
+                        <p><strong>Ngày tính:</strong> ${calculation.calculation_date || calculation.created_at}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Tổng số tiết:</strong> ${(calculation.total_hours || 0).toFixed(1)}</p>
+                        <p><strong>Tiết quy đổi:</strong> ${(calculation.adjusted_hours || 0).toFixed(1)}</p>
+                        <p><strong>Hệ số GV:</strong> ${(calculation.teacher_coefficient || 1.0).toFixed(2)}</p>
+                        <p><strong>Tiền cơ bản/tiết:</strong> ${(calculation.base_hourly_rate || 100000).toLocaleString()} VNĐ</p>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <h4 class="text-success">
+                        <strong>Tổng tiền dạy: ${(calculation.total_amount || 0).toLocaleString()} VNĐ</strong>
+                    </h4>
+                </div>
+                ${calculation.notes ? `<p><strong>Ghi chú:</strong> ${calculation.notes}</p>` : ''}
+                <div class="mt-3">
+                    <span class="badge badge-${calculation.is_approved ? 'success' : 'warning'} badge-lg">
+                        ${calculation.is_approved ? 'Đã duyệt' : 'Chờ duyệt'}
+                    </span>
+                    ${calculation.approved_by ? `<span class="ml-2">bởi ${calculation.approved_by}</span>` : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    function closeViewModal() {
+        document.getElementById('view-calculation-modal').style.display = 'none';
+    }
+
+    function approveCalculation(id) {
+        if (confirm('Bạn có chắc chắn muốn duyệt kết quả tính toán này?')) {
+            fetch(`/api/salary-calculations/${id}/approve`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({approved_by: 'Admin'})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('Kết quả tính toán đã được duyệt!', 'success');
+                    refreshCalculationsList();
+                } else {
+                    showAlert('Lỗi: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+            });
+        }
+    }
+
+    function deleteCalculation(id) {
+        if (confirm('Bạn có chắc chắn muốn xóa kết quả tính toán này?')) {
+            fetch(`/api/salary-calculations/${id}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('Kết quả tính toán đã được xóa!', 'success');
+                    refreshCalculationsList();
+                } else {
+                    showAlert('Lỗi: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+            });
+        }
+    }
+
+    function showAlert(message, type) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="close" data-dismiss="alert">
+                <span>&times;</span>
+            </button>
+        `;
+        document.querySelector('.content').insertBefore(alertDiv, document.querySelector('.content').firstChild);
+        
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 5000);
+    }
+</script>
+{% endblock %}

@@ -69,6 +69,22 @@ with app.app_context():
         except ImportError:
             print("! ClassSection model not found - will create empty list")
         
+        # Try to import SalaryCalculation model
+        try:
+            from models.salary_calculation import SalaryCalculation
+            globals()['SalaryCalculation'] = SalaryCalculation
+            print("✓ SalaryCalculation model imported")
+        except ImportError:
+            print("! SalaryCalculation model not found")
+        
+        # Try to import SalarySetting model
+        try:
+            from models.salary_setting import SalarySetting
+            globals()['SalarySetting'] = SalarySetting
+            print("✓ SalarySetting model imported")
+        except ImportError:
+            print("! SalarySetting model not found")
+        
         # Make them globally available
         globals()['Degree'] = Degree
         globals()['Department'] = Department
@@ -324,19 +340,53 @@ def teaching_assignments():
                              subjects=[],
                              semesters=[])
 
+# Salary Management Routes - Separate pages
+@app.route('/salary-settings')
+def salary_settings():
+    try:
+        settings = get_default_salary_settings()
+        return render_template('salary_settings.html', settings=settings)
+    except Exception as e:
+        print(f"Error in salary settings route: {e}")
+        return render_template('salary_settings.html', settings={})
+
 @app.route('/salary-calculations')
 def salary_calculations():
     try:
-        calculations_list = SalaryCalculation.query.order_by(SalaryCalculation.created_at.desc()).all()
-        teachers_list = Teacher.query.filter_by(is_active=True).all()
+        teachers_list = []
+        semesters_list = []
+        
+        if 'Teacher' in globals():
+            teachers_list = Teacher.query.filter_by(is_active=True).all()
+        if 'Semester' in globals():
+            semesters_list = Semester.query.filter_by(is_active=True).all()
+        
         return render_template('salary_calculations.html',
-                             calculations=calculations_list,
-                             teachers=teachers_list)
+                             teachers=teachers_list,
+                             semesters=semesters_list)
     except Exception as e:
         print(f"Error in salary calculations route: {e}")
-        return render_template('salary_calculations.html',
-                             calculations=[],
-                             teachers=[])
+        return render_template('salary_calculations.html', teachers=[], semesters=[])
+
+@app.route('/salary-history')
+def salary_history():
+    try:
+        calculations_list = []
+        
+        try:
+            from models.salary_calculation import SalaryCalculation
+            # Test if table exists and has required columns
+            calculations_raw = SalaryCalculation.query.order_by(SalaryCalculation.created_at.desc()).all()
+            calculations_list = [calc.to_dict() for calc in calculations_raw]
+        except Exception as db_error:
+            print(f"Database error in salary_history: {db_error}")
+            # Create empty list if table doesn't exist or has missing columns
+            calculations_list = []
+        
+        return render_template('salary_history.html', calculations=calculations_list)
+    except Exception as e:
+        print(f"Error in salary history route: {e}")
+        return render_template('salary_history.html', calculations=[])
 
 @app.route('/degrees')
 def degrees():
@@ -1132,7 +1182,17 @@ def get_teaching_assignments_list():
         if 'TeachingAssignment' not in globals():
             return jsonify({'success': False, 'message': 'TeachingAssignment model not available'})
         
-        assignments = TeachingAssignment.query.order_by(TeachingAssignment.created_at.desc()).all()
+        # Get filter parameters
+        teacher_id = request.args.get('teacher_id')
+        semester_id = request.args.get('semester_id')
+        
+        query = TeachingAssignment.query
+        if teacher_id:
+            query = query.filter_by(teacher_id=teacher_id)
+        if semester_id:
+            query = query.filter_by(semester_id=semester_id)
+        
+        assignments = query.order_by(TeachingAssignment.created_at.desc()).all()
         assignments_data = [assignment.to_dict() for assignment in assignments]
         
         return jsonify({'success': True, 'teaching_assignments': assignments_data})
@@ -1157,12 +1217,9 @@ def get_teaching_assignment(id):
         return jsonify({'success': False, 'message': str(e)})
 
 @app.route('/api/teaching-assignments/<int:id>', methods=['PUT'])
-def update_teaching_assignment(id):
+def api_update_teaching_assignment(id):
     try:
-        # Import TeachingAssignment model
-        try:
-            from models.teaching_assignment import TeachingAssignment
-        except ImportError:
+        if 'TeachingAssignment' not in globals():
             return jsonify({'success': False, 'message': 'TeachingAssignment model not available'})
             
         assignment = TeachingAssignment.query.get(id)
@@ -1170,37 +1227,23 @@ def update_teaching_assignment(id):
             return jsonify({'success': False, 'message': 'Không tìm thấy phân công'})
         
         data = request.get_json()
-        print(f"Updating assignment {id} with data: {data}")
         
         # Update fields
-        if 'actual_hours' in data:
-            assignment.actual_hours = int(data['actual_hours'])
-        if 'class_student_count' in data:
-            assignment.class_student_count = int(data['class_student_count'])
-        if 'notes' in data:
-            assignment.notes = data['notes']
-        
-        # Recalculate payment
-        assignment.calculate_payment()
+        assignment.actual_hours = data.get('actual_hours', assignment.actual_hours)
+        assignment.class_student_count = data.get('class_student_count', assignment.class_student_count)
+        assignment.notes = data.get('notes', assignment.notes)
         
         db.session.commit()
-        print(f"Assignment updated successfully: {assignment.to_dict()}")
         
-        return jsonify({
-            'success': True, 
-            'message': 'Phân công đã được cập nhật thành công!',
-            'assignment': assignment.to_dict()
-        })
+        return jsonify({'success': True, 'message': 'Phân công đã được cập nhật thành công!'})
         
     except Exception as e:
         db.session.rollback()
         print(f"Error updating teaching assignment: {e}")
-        import traceback
-        traceback.print_exc()
         return jsonify({'success': False, 'message': str(e)})
 
 @app.route('/api/teaching-assignments/<int:id>', methods=['DELETE'])
-def delete_teaching_assignment(id):
+def api_delete_teaching_assignment(id):
     try:
         if 'TeachingAssignment' not in globals():
             return jsonify({'success': False, 'message': 'TeachingAssignment model not available'})
@@ -1219,10 +1262,269 @@ def delete_teaching_assignment(id):
         print(f"Error deleting teaching assignment: {e}")
         return jsonify({'success': False, 'message': str(e)})
 
+# Salary Management API Routes
+@app.route('/api/salary-settings', methods=['GET'])
+def api_get_salary_settings():
+    try:
+        settings = get_default_salary_settings()
+        return jsonify({'success': True, 'settings': settings})
+    except Exception as e:
+        print(f"Error getting salary settings API: {e}")
+        return jsonify({'success': False, 'message': str(e)})
+
+def get_default_salary_settings():
+    """Get default salary settings"""
+    try:
+        from models.salary_setting import SalarySetting
+        
+        base_rate = SalarySetting.get_setting('base_hourly_rate', '100000')
+        
+        return {
+            'base_hourly_rate': int(base_rate),
+            'degree_coefficients': {
+                'dai_hoc': float(SalarySetting.get_setting('degree_coeff_dai_hoc', '1.0')),
+                'thac_si': float(SalarySetting.get_setting('degree_coeff_thac_si', '1.2')),
+                'tien_si': float(SalarySetting.get_setting('degree_coeff_tien_si', '1.5')),
+                'pho_giao_su': float(SalarySetting.get_setting('degree_coeff_pho_giao_su', '1.8')),
+                'giao_su': float(SalarySetting.get_setting('degree_coeff_giao_su', '2.0'))
+            },
+            'class_coefficients': {
+                'under_20': float(SalarySetting.get_setting('class_coeff_under_20', '-0.3')),
+                '20_29': float(SalarySetting.get_setting('class_coeff_20_29', '-0.2')),
+                '30_39': float(SalarySetting.get_setting('class_coeff_30_39', '-0.1')),
+                '40_49': float(SalarySetting.get_setting('class_coeff_40_49', '0.0')),
+                '50_59': float(SalarySetting.get_setting('class_coeff_50_59', '0.1')),
+                '60_69': float(SalarySetting.get_setting('class_coeff_60_69', '0.2')),
+                '70_79': float(SalarySetting.get_setting('class_coeff_70_79', '0.3')),
+                'over_80': float(SalarySetting.get_setting('class_coeff_over_80', '0.4'))
+            }
+        }
+    except:
+        return {
+            'base_hourly_rate': 100000,
+            'degree_coefficients': {
+                'dai_hoc': 1.0, 'thac_si': 1.2, 'tien_si': 1.5,
+                'pho_giao_su': 1.8, 'giao_su': 2.0
+            },
+            'class_coefficients': {
+                'under_20': -0.3, '20_29': -0.2, '30_39': -0.1, '40_49': 0.0,
+                '50_59': 0.1, '60_69': 0.2, '70_79': 0.3, 'over_80': 0.4
+            }
+        }
+
+# API Routes for Salary Settings
+@app.route('/api/salary-settings', methods=['POST'])
+def api_update_salary_settings():
+    try:
+        data = request.get_json()
+        
+        try:
+            from models.salary_setting import SalarySetting
+            
+            # Update base hourly rate
+            if 'base_hourly_rate' in data:
+                SalarySetting.set_setting('base_hourly_rate', data['base_hourly_rate'], 'Định mức tiền theo tiết')
+            
+            # Update degree coefficients
+            if 'degree_coefficients' in data:
+                for degree, coeff in data['degree_coefficients'].items():
+                    SalarySetting.set_setting(f'degree_coeff_{degree}', coeff, f'Hệ số bằng cấp {degree}')
+            
+            # Update class coefficients
+            if 'class_coefficients' in data:
+                for class_range, coeff in data['class_coefficients'].items():
+                    SalarySetting.set_setting(f'class_coeff_{class_range}', coeff, f'Hệ số lớp {class_range}')
+        except ImportError:
+            # If SalarySetting model not available, just return success
+            pass
+        
+        return jsonify({'success': True, 'message': 'Cài đặt đã được cập nhật thành công!'})
+    except Exception as e:
+        print(f"Error updating salary settings: {e}")
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/salary-calculate', methods=['POST'])
+def api_calculate_salary():
+    try:
+        data = request.get_json()
+        teacher_id = data.get('teacher_id')
+        semester_id = data.get('semester_id')
+        
+        if not teacher_id:
+            return jsonify({'success': False, 'message': 'Vui lòng chọn giảng viên'})
+        
+        result = calculate_teacher_salary_detailed(teacher_id, semester_id)
+        
+        if 'error' in result:
+            return jsonify({'success': False, 'message': result['error']})
+        
+        # Save calculation result
+        try:
+            from models.salary_calculation import SalaryCalculation
+            calculation = SalaryCalculation(
+                teacher_id=teacher_id,
+                semester_id=semester_id,
+                total_hours=result['total_hours'],
+                adjusted_hours=result['adjusted_hours'],
+                total_amount=result['total_amount'],
+                base_hourly_rate=result['base_hourly_rate'],
+                teacher_coefficient=result['teacher_coefficient']
+            )
+            db.session.add(calculation)
+            db.session.commit()
+        except Exception as e:
+            print(f"Error saving calculation: {e}")
+        
+        return jsonify({'success': True, 'result': result})
+    except Exception as e:
+        print(f"Error calculating salary: {e}")
+        return jsonify({'success': False, 'message': str(e)})
+
+def calculate_teacher_salary_detailed(teacher_id, semester_id=None):
+    """Calculate detailed salary for a teacher"""
+    try:
+        if 'Teacher' not in globals():
+            return {'error': 'Teacher model not available'}
+        
+        teacher = Teacher.query.get(teacher_id)
+        if not teacher:
+            return {'error': 'Không tìm thấy giảng viên'}
+        
+        settings = get_default_salary_settings()
+        assignments = []
+        total_hours = 0
+        adjusted_hours = 0
+        
+        # Get teaching assignments
+        try:
+            if 'TeachingAssignment' in globals():
+                query = TeachingAssignment.query.filter_by(teacher_id=teacher_id)
+                if semester_id:
+                    query = query.filter_by(semester_id=semester_id)
+                
+                teaching_assignments = query.all()
+                
+                for assignment in teaching_assignments:
+                    assignment_dict = assignment.to_dict()
+                    assignments.append(assignment_dict)
+                    total_hours += assignment_dict.get('actual_hours', 0)
+                    adjusted_hours += assignment_dict.get('calculated_adjusted_hours', 0)
+        except Exception as e:
+            print(f"Error getting teaching assignments: {e}")
+        
+        # Calculate total amount
+        teacher_coeff = teacher.effective_teacher_coefficient if hasattr(teacher, 'effective_teacher_coefficient') else 1.5
+        base_rate = settings['base_hourly_rate']
+        total_amount = adjusted_hours * teacher_coeff * base_rate
+        
+        # Get department name safely
+        department_name = 'N/A'
+        try:
+            if hasattr(teacher, 'department_id') and teacher.department_id:
+                department = Department.query.get(teacher.department_id)
+                if department:
+                    department_name = department.name
+        except:
+            pass
+        
+        return {
+            'teacher_id': teacher_id,
+            'teacher_name': teacher.name,
+            'department_name': department_name,
+            'total_hours': total_hours,
+            'adjusted_hours': adjusted_hours,
+            'total_amount': total_amount,
+            'base_hourly_rate': base_rate,
+            'teacher_coefficient': teacher_coeff,
+            'assignments': assignments
+        }
+    except Exception as e:
+        print(f"Error in calculate_teacher_salary_detailed: {e}")
+        return {'error': str(e)}
+
+@app.route('/api/salary-calculations/list', methods=['GET'])
+def api_get_salary_calculations_list():
+    try:
+        try:
+            from models.salary_calculation import SalaryCalculation
+            calculations = SalaryCalculation.query.order_by(SalaryCalculation.created_at.desc()).all()
+            calculations_data = [calc.to_dict() for calc in calculations]
+            return jsonify({'success': True, 'calculations': calculations_data})
+        except Exception as db_error:
+            print(f"Database error in api_get_salary_calculations_list: {db_error}")
+            # Return empty list if table doesn't exist or has issues
+            return jsonify({'success': True, 'calculations': []})
+    except Exception as e:
+        print(f"Error getting salary calculations list: {e}")
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/salary-calculations/<int:id>', methods=['GET'])
+def api_get_salary_calculation(id):
+    try:
+        try:
+            from models.salary_calculation import SalaryCalculation
+            calculation = SalaryCalculation.query.get(id)
+            if not calculation:
+                return jsonify({'success': False, 'message': 'Không tìm thấy kết quả tính toán'})
+            
+            return jsonify({'success': True, 'calculation': calculation.to_dict()})
+        except ImportError:
+            return jsonify({'success': False, 'message': 'SalaryCalculation model not available'})
+    except Exception as e:
+        print(f"Error getting salary calculation: {e}")
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/salary-calculations/<int:id>/approve', methods=['POST'])
+def api_approve_salary_calculation(id):
+    try:
+        try:
+            from models.salary_calculation import SalaryCalculation
+            calculation = SalaryCalculation.query.get(id)
+            if not calculation:
+                return jsonify({'success': False, 'message': 'Không tìm thấy kết quả tính toán'})
+            
+            data = request.get_json()
+            calculation.is_approved = True
+            calculation.approved_by = data.get('approved_by', 'Admin')
+            calculation.approved_at = datetime.utcnow()
+            
+            db.session.commit()
+            
+            return jsonify({'success': True, 'message': 'Kết quả tính toán đã được duyệt!'})
+        except ImportError:
+            return jsonify({'success': False, 'message': 'SalaryCalculation model not available'})
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error approving salary calculation: {e}")
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/salary-calculations/<int:id>', methods=['DELETE'])
+def api_delete_salary_calculation(id):
+    try:
+        try:
+            from models.salary_calculation import SalaryCalculation
+            calculation = SalaryCalculation.query.get(id)
+            if not calculation:
+                return jsonify({'success': False, 'message': 'Không tìm thấy kết quả tính toán'})
+            
+            db.session.delete(calculation)
+            db.session.commit()
+            
+            return jsonify({'success': True, 'message': 'Kết quả tính toán đã được xóa!'})
+        except ImportError:
+            return jsonify({'success': False, 'message': 'SalaryCalculation model not available'})
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error deleting salary calculation: {e}")
+        return jsonify({'success': False, 'message': str(e)})
+
 # API Routes for Class Sections
 @app.route('/api/class-sections', methods=['POST'])
-def api_create_class_section():
+def create_class_section():
     try:
+        if 'ClassSection' not in globals():
+            return jsonify({'success': False, 'message': 'ClassSection model not available'})
+            
         data = request.get_json()
         
         if not data:
@@ -1234,13 +1536,8 @@ def api_create_class_section():
             if not data.get(field):
                 return jsonify({'success': False, 'message': f'{field} không được để trống'})
         
-        # Check if ClassSection model exists
-        try:
-            from models.class_section import ClassSection
-        except ImportError:
-            return jsonify({'success': False, 'message': 'ClassSection model not available'})
-        
         # Check for existing class section
+        from models.class_section import ClassSection
         existing = ClassSection.query.filter_by(code=data['code']).first()
         if existing:
             return jsonify({'success': False, 'message': 'Mã lớp này đã tồn tại'})
@@ -1254,23 +1551,6 @@ def api_create_class_section():
         if not semester:
             return jsonify({'success': False, 'message': 'Kỳ học không tồn tại'})
         
-        # Parse dates safely
-        from datetime import datetime as dt_parser
-        start_date = None
-        end_date = None
-        
-        if data.get('start_date'):
-            try:
-                start_date = dt_parser.strptime(data['start_date'], '%Y-%m-%d').date()
-            except:
-                pass
-                
-        if data.get('end_date'):
-            try:
-                end_date = dt_parser.strptime(data['end_date'], '%Y-%m-%d').date()
-            except:
-                pass
-        
         class_section = ClassSection(
             code=data['code'],
             name=data['name'],
@@ -1281,8 +1561,6 @@ def api_create_class_section():
             max_students=data.get('max_students', 50),
             classroom=data.get('classroom'),
             schedule_info=data.get('schedule_info'),
-            start_date=start_date,
-            end_date=end_date,
             notes=data.get('notes'),
             status='planned'
         )
@@ -1295,54 +1573,33 @@ def api_create_class_section():
     except Exception as e:
         db.session.rollback()
         print(f"Error creating class section: {e}")
-        import traceback
-        traceback.print_exc()
         return jsonify({'success': False, 'message': str(e)})
 
 @app.route('/api/class-sections/list', methods=['GET'])
-def api_get_class_sections_list():
+def get_class_sections_list():
     try:
-        try:
-            from models.class_section import ClassSection
-            
-            # Get filter parameters
-            semester_id = request.args.get('semester_id')
-            
-            query = ClassSection.query.filter_by(is_active=True)
-            if semester_id:
-                query = query.filter_by(semester_id=semester_id)
-            
-            class_sections = query.order_by(ClassSection.created_at.desc()).all()
-            class_sections_data = [cs.to_dict() for cs in class_sections]
-            
-            return jsonify({'success': True, 'class_sections': class_sections_data})
-        except ImportError:
-            return jsonify({'success': True, 'class_sections': []})
+        if 'ClassSection' not in globals():
+            return jsonify({'success': False, 'message': 'ClassSection model not available'})
+        
+        # Get filter parameters
+        teacher_id = request.args.get('teacher_id')
+        subject_id = request.args.get('subject_id')
+        semester_id = request.args.get('semester_id')
+        
+        query = ClassSection.query.filter_by(is_active=True)
+        if teacher_id:
+            query = query.filter_by(teacher_id=teacher_id)
+        if subject_id:
+            query = query.filter_by(subject_id=subject_id)
+        if semester_id:
+            query = query.filter_by(semester_id=semester_id)
+        
+        class_sections = query.order_by(ClassSection.created_at.desc()).all()
+        class_sections_data = [section.to_dict() for section in class_sections]
+        
+        return jsonify({'success': True, 'class_sections': class_sections_data})
     except Exception as e:
         print(f"Error getting class sections list: {e}")
-        return jsonify({'success': False, 'message': str(e)})
-
-@app.route('/api/class-sections/<int:id>', methods=['DELETE'])
-def api_delete_class_section(id):
-    try:
-        try:
-            from models.class_section import ClassSection
-        except ImportError:
-            return jsonify({'success': False, 'message': 'ClassSection model not available'})
-            
-        class_section = ClassSection.query.get(id)
-        if not class_section:
-            return jsonify({'success': False, 'message': 'Không tìm thấy lớp học phần'})
-        
-        # Set is_active to False instead of deleting
-        class_section.is_active = False
-        db.session.commit()
-        
-        return jsonify({'success': True, 'message': 'Lớp học phần đã được xóa thành công!'})
-        
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error deleting class section: {e}")
         return jsonify({'success': False, 'message': str(e)})
 
 @app.route('/api/class-sections/<int:id>', methods=['GET'])
@@ -1399,162 +1656,54 @@ def api_update_class_section(id):
         print(f"Error updating class section: {e}")
         return jsonify({'success': False, 'message': str(e)})
 
-@app.route('/api/semesters', methods=['POST'])
-def api_create_semester():
+@app.route('/api/class-sections/<int:id>', methods=['DELETE'])
+def api_delete_class_section(id):
     try:
-        data = request.get_json()
-        print(f"Received semester data: {data}")  # Debug log
-        
-        if not data:
-            return jsonify({'success': False, 'message': 'Không có dữ liệu được gửi'})
-        
-        # Validate required fields
-        required_fields = ['name', 'year']
-        for field in required_fields:
-            if not data.get(field):
-                return jsonify({'success': False, 'message': f'{field} không được để trống'})
-        
-        # Check for existing semester
-        existing = Semester.query.filter_by(
-            name=data['name'], 
-            year=data['year']
-        ).first()
-        if existing:
-            return jsonify({'success': False, 'message': 'Kỳ học này đã tồn tại'})
-        
-        # If this is set as current, unset other current semesters
-        if data.get('is_current'):
-            Semester.query.filter_by(is_current=True).update({'is_current': False})
-        
-        semester = Semester(
-            name=data['name'],
-            year=int(data['year']),
-            academic_year=data.get('academic_year'),
-            is_current=bool(data.get('is_current', False)),
-            is_active=True
-        )
-        
-        db.session.add(semester)
-        db.session.commit()
-        
-        print(f"Semester created successfully: {semester.to_dict()}")  # Debug log
-        
-        return jsonify({'success': True, 'message': 'Kỳ học đã được tạo thành công!'})
-        
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error creating semester: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'success': False, 'message': str(e)})
-
-@app.route('/api/semesters/list', methods=['GET'])
-def api_get_semesters_list():
-    try:
-        semesters = Semester.query.filter_by(is_active=True).order_by(Semester.year.desc(), Semester.name).all()
-        semesters_data = [semester.to_dict() for semester in semesters]
-        return jsonify({'success': True, 'semesters': semesters_data})
-    except Exception as e:
-        print(f"Error getting semesters list: {e}")
-        return jsonify({'success': False, 'message': str(e)})
-
-@app.route('/api/semesters/<int:id>', methods=['DELETE'])
-def api_delete_semester(id):
-    try:
-        semester = Semester.query.get(id)
-        if not semester:
-            return jsonify({'success': False, 'message': 'Không tìm thấy kỳ học'})
-        
-        # Check if any class sections are using this semester
         try:
-            if 'ClassSection' in globals():
-                class_count = ClassSection.query.filter_by(semester_id=id, is_active=True).count()
-                if class_count > 0:
-                    return jsonify({'success': False, 'message': f'Không thể xóa kỳ học đang được sử dụng bởi {class_count} lớp học phần'})
-        except:
-            pass
+            from models.class_section import ClassSection
+        except ImportError:
+            return jsonify({'success': False, 'message': 'ClassSection model not available'})
+            
+        class_section = ClassSection.query.get(id)
+        if not class_section:
+            return jsonify({'success': False, 'message': 'Không tìm thấy lớp học phần'})
         
-        # Check if any teaching assignments are using this semester
+        # Check if any teaching assignments are using this class
         try:
             if 'TeachingAssignment' in globals():
-                assignment_count = TeachingAssignment.query.filter_by(semester_id=id).count()
+                assignment_count = TeachingAssignment.query.filter_by(class_code=class_section.code).count()
                 if assignment_count > 0:
-                    return jsonify({'success': False, 'message': f'Không thể xóa kỳ học đang được sử dụng bởi {assignment_count} phân công giảng dạy'})
+                    return jsonify({'success': False, 'message': f'Không thể xóa lớp đang có {assignment_count} phân công giảng dạy'})
         except:
             pass
         
-        db.session.delete(semester)
+        db.session.delete(class_section)
         db.session.commit()
         
-        return jsonify({'success': True, 'message': 'Kỳ học đã được xóa thành công!'})
+        return jsonify({'success': True, 'message': 'Lớp học phần đã được xóa thành công!'})
         
     except Exception as e:
         db.session.rollback()
-        print(f"Error deleting semester: {e}")
+        print(f"Error deleting class section: {e}")
         return jsonify({'success': False, 'message': str(e)})
 
-@app.route('/api/semesters/<int:id>', methods=['GET'])
-def api_get_semester(id):
+# Statistics API Routes
+@app.route('/api/statistics/teacher', methods=['GET'])
+def api_teacher_statistics():
     try:
-        semester = Semester.query.get(id)
-        if not semester:
-            return jsonify({'success': False, 'message': 'Không tìm thấy kỳ học'})
-        
-        return jsonify({'success': True, 'semester': semester.to_dict()})
+        stats = calculate_teacher_statistics()
+        return jsonify({'success': True, 'statistics': stats})
     except Exception as e:
-        print(f"Error getting semester: {e}")
+        print(f"Error getting teacher statistics: {e}")
         return jsonify({'success': False, 'message': str(e)})
 
-@app.route('/api/semesters/<int:id>', methods=['PUT'])
-def api_update_semester(id):
+@app.route('/api/statistics/class', methods=['GET'])
+def api_class_statistics():
     try:
-        semester = Semester.query.get(id)
-        if not semester:
-            return jsonify({'success': False, 'message': 'Không tìm thấy kỳ học'})
-        
-        data = request.get_json()
-        
-        # Check for existing semester with same name/year (exclude current)
-        if data.get('name') and data.get('year'):
-            existing = Semester.query.filter_by(
-                name=data['name'], 
-                year=data['year']
-            ).filter(Semester.id != id).first()
-            if existing:
-                return jsonify({'success': False, 'message': 'Kỳ học này đã tồn tại'})
-        
-        # If this is set as current, unset other current semesters
-        if data.get('is_current'):
-            Semester.query.filter(Semester.id != id).update({'is_current': False})
-        
-        # Update fields
-        semester.name = data.get('name', semester.name)
-        semester.year = int(data.get('year', semester.year))
-        semester.academic_year = data.get('academic_year', semester.academic_year)
-        semester.is_current = bool(data.get('is_current', semester.is_current))
-        
-        # Handle dates
-        if data.get('start_date'):
-            try:
-                from datetime import datetime as dt_parser
-                semester.start_date = dt_parser.strptime(data['start_date'], '%Y-%m-%d').date()
-            except:
-                pass
-                
-        if data.get('end_date'):
-            try:
-                from datetime import datetime as dt_parser
-                semester.end_date = dt_parser.strptime(data['end_date'], '%Y-%m-%d').date()
-            except:
-                pass
-        
-        db.session.commit()
-        
-        return jsonify({'success': True, 'message': 'Kỳ học đã được cập nhật thành công!'})
-        
+        stats = calculate_class_statistics()
+        return jsonify({'success': True, 'statistics': stats})
     except Exception as e:
-        db.session.rollback()
-        print(f"Error updating semester: {e}")
+        print(f"Error getting class statistics: {e}")
         return jsonify({'success': False, 'message': str(e)})
 
 # Make sure app runs

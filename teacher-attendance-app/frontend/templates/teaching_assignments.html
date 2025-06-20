@@ -109,11 +109,6 @@
                         <th>Mã lớp</th>
                         <th>SV</th>
                         <th>Tiết (KH/TT)</th>
-                        <th>Hệ số GV</th>
-                        <th>Hệ số HP</th>
-                        <th>Hệ số lớp</th>
-                        <th>Tiết quy đổi</th>
-                        <th>Thành tiền</th>
                         <th>Trạng thái</th>
                         <th>Thao tác</th>
                     </tr>
@@ -127,11 +122,6 @@
                         <td>{{ assignment.class_code }}</td>
                         <td>{{ assignment.class_student_count }}</td>
                         <td>{{ assignment.planned_hours }}/{{ assignment.actual_hours }}</td>
-                        <td>{{ "%.2f"|format(assignment.effective_teacher_coefficient) }}</td>
-                        <td>{{ "%.2f"|format(assignment.effective_subject_coefficient) }}</td>
-                        <td>{{ "%.2f"|format(assignment.class_coefficient) }}</td>
-                        <td>{{ "%.2f"|format(assignment.calculated_adjusted_hours) }}</td>
-                        <td>{{ "{:,.0f}".format(assignment.calculated_amount) }} VND</td>
                         <td>
                             <span class="badge badge-{{ 'success' if assignment.is_approved else 'warning' }}">
                                 {{ 'Đã duyệt' if assignment.is_approved else 'Chờ duyệt' }}
@@ -148,7 +138,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="13" class="text-center">Chưa có phân công nào</td>
+                        <td colspan="8" class="text-center">Chưa có phân công nào</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -179,9 +169,6 @@
                         <textarea id="edit-assignment-notes" class="form-control" rows="3"></textarea>
                     </div>
                 </div>
-            </div>
-            <div id="edit-calculation-preview" class="alert alert-info" style="display: none;">
-                <!-- Preview calculation will be shown here -->
             </div>
             <button type="submit" class="btn btn-success">Cập nhật</button>
             <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Hủy</button>
@@ -272,7 +259,7 @@
         tbody.innerHTML = '';
         
         if (assignments.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="13" style="text-align: center;">Chưa có phân công nào</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Chưa có phân công nào</td></tr>';
             return;
         }
         
@@ -285,11 +272,6 @@
                 <td>${assignment.class_code}</td>
                 <td>${assignment.class_student_count}</td>
                 <td>${assignment.planned_hours}/${assignment.actual_hours}</td>
-                <td>${assignment.effective_teacher_coefficient.toFixed(2)}</td>
-                <td>${assignment.effective_subject_coefficient.toFixed(2)}</td>
-                <td>${assignment.class_coefficient.toFixed(2)}</td>
-                <td>${assignment.calculated_adjusted_hours.toFixed(2)}</td>
-                <td>${assignment.calculated_amount.toLocaleString()} VND</td>
                 <td>
                     <span class="badge badge-${assignment.is_approved ? 'success' : 'warning'}">
                         ${assignment.is_approved ? 'Đã duyệt' : 'Chờ duyệt'}
@@ -326,7 +308,6 @@
                     hourlyRate: 100000
                 };
                 
-                updatePreviewCalculation();
                 document.getElementById('edit-assignment-modal').style.display = 'block';
             } else {
                 showAlert('Lỗi: ' + data.message, 'error');
@@ -398,52 +379,6 @@
             });
         }
     }
-
-    function calculateClassCoefficient(studentCount) {
-        if (studentCount < 20) return -0.3;
-        if (studentCount <= 29) return -0.2;
-        if (studentCount <= 39) return -0.1;
-        if (studentCount <= 49) return 0.0;
-        if (studentCount <= 59) return 0.1;
-        if (studentCount <= 69) return 0.2;
-        if (studentCount <= 79) return 0.3;
-        return 0.4;
-    }
-
-    function updatePreviewCalculation() {
-        const actualHours = parseInt(document.getElementById('edit-assignment-actual-hours').value) || 0;
-        const studentCount = parseInt(document.getElementById('edit-assignment-student-count').value) || 0;
-        
-        if (currentAssignmentData) {
-            const teacherCoeff = currentAssignmentData.teacherCoeff;
-            const subjectCoeff = currentAssignmentData.subjectCoeff;
-            const hourlyRate = currentAssignmentData.hourlyRate;
-            const classCoeff = calculateClassCoefficient(studentCount);
-            
-            const adjustedHours = actualHours * (subjectCoeff + classCoeff);
-            const totalAmount = adjustedHours * teacherCoeff * hourlyRate;
-            
-            document.getElementById('edit-calculation-preview').innerHTML = `
-                <h6><i class="fas fa-calculator"></i> Dự tính tính toán mới:</h6>
-                <div class="row">
-                    <div class="col-6">
-                        <p><strong>Hệ số GV:</strong> ${teacherCoeff.toFixed(2)}</p>
-                        <p><strong>Hệ số HP:</strong> ${subjectCoeff.toFixed(2)}</p>
-                        <p><strong>Hệ số lớp:</strong> <span class="badge badge-${classCoeff >= 0 ? 'success' : 'warning'}">${classCoeff.toFixed(2)}</span></p>
-                    </div>
-                    <div class="col-6">
-                        <p><strong>Tiết quy đổi:</strong> ${adjustedHours.toFixed(2)}</p>
-                        <p><strong>Tổng tiền:</strong> <strong class="text-success">${totalAmount.toLocaleString()} VND</strong></p>
-                    </div>
-                </div>
-            `;
-            document.getElementById('edit-calculation-preview').style.display = 'block';
-        }
-    }
-
-    // Event listeners for preview calculation
-    document.getElementById('edit-assignment-actual-hours').addEventListener('input', updatePreviewCalculation);
-    document.getElementById('edit-assignment-student-count').addEventListener('input', updatePreviewCalculation);
 
     function showAlert(message, type) {
         const alertDiv = document.createElement('div');

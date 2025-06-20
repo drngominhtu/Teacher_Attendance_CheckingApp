@@ -44,6 +44,17 @@
                         <li><a href="{{ url_for('teaching_assignments') }}"><i class="fas fa-user-clock"></i> Phân công giảng dạy</a></li>
                     </ul>
                 </li>
+                <li class="has-dropdown">
+                    <a href="#" class="dropdown-toggle">
+                        <i class="fas fa-calculator"></i> Tính tiền dạy
+                        <i class="fas fa-chevron-down dropdown-icon"></i>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a href="{{ url_for('salary_settings') }}"><i class="fas fa-cog"></i> Cài đặt hệ số</a></li>
+                        <li><a href="{{ url_for('salary_calculations') }}"><i class="fas fa-calculator"></i> Tính tiền dạy</a></li>
+                        <li><a href="{{ url_for('salary_history') }}"><i class="fas fa-history"></i> Lịch sử tính toán</a></li>
+                    </ul>
+                </li>
             </ul>
         </nav>
     </div>

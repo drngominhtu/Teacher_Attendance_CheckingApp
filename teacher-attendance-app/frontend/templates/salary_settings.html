@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+
+{% block title %}Cài đặt hệ số tính tiền dạy{% endblock %}
+{% block page_title %}Cài đặt hệ số tính tiền dạy{% endblock %}
+{% block breadcrumb %}Trang chủ / Tính tiền dạy / Cài đặt hệ số{% endblock %}
+
+{% block content %}
+<!-- UC3.1: Thiết lập định mức tiền theo tiết -->
+<div class="card mb-3">
+    <div class="card-header">
+        <h5><i class="fas fa-money-bill"></i> UC3.1: Thiết lập định mức tiền theo tiết</h5>
+    </div>
+    <div class="card-body">
+        <form id="hourly-rate-form">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="base-hourly-rate">Tiền một tiết chuẩn: <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="number" id="base-hourly-rate" class="form-control" 
+                                   value="{{ settings.base_hourly_rate or 100000 }}" min="0" required>
+                            <div class="input-group-append">
+                                <span class="input-group-text">VNĐ</span>
+                            </div>
+                        </div>
+                        <small class="text-muted">Định mức tiền cho một tiết giảng dạy chuẩn</small>
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-success" id="hourly-rate-btn">
+                <i class="fas fa-save"></i> Lưu định mức
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- UC3.2: Thiết lập hệ số giáo viên theo bằng cấp -->
+<div class="card mb-3">
+    <div class="card-header">
+        <h5><i class="fas fa-graduation-cap"></i> UC3.2: Thiết lập hệ số giáo viên theo bằng cấp</h5>
+    </div>
+    <div class="card-body">
+        <form id="degree-coefficients-form">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="coeff-dai-hoc">Đại học:</label>
+                        <input type="number" id="coeff-dai-hoc" class="form-control" 
+                               step="0.1" min="0.5" max="3.0" value="1.0">
+                    </div>
+                    <div class="form-group">
+                        <label for="coeff-thac-si">Thạc sĩ:</label>
+                        <input type="number" id="coeff-thac-si" class="form-control" 
+                               step="0.1" min="0.5" max="3.0" value="1.2">
+                    </div>
+                    <div class="form-group">
+                        <label for="coeff-tien-si">Tiến sĩ:</label>
+                        <input type="number" id="coeff-tien-si" class="form-control" 
+                               step="0.1" min="0.5" max="3.0" value="1.5">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="coeff-pho-giao-su">Phó Giáo sư:</label>
+                        <input type="number" id="coeff-pho-giao-su" class="form-control" 
+                               step="0.1" min="0.5" max="3.0" value="1.8">
+                    </div>
+                    <div class="form-group">
+                        <label for="coeff-giao-su">Giáo sư:</label>
+                        <input type="number" id="coeff-giao-su" class="form-control" 
+                               step="0.1" min="0.5" max="3.0" value="2.0">
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-success" id="degree-coefficients-btn">
+                <i class="fas fa-save"></i> Lưu hệ số bằng cấp
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- UC3.3: Thiết lập hệ số lớp -->
+<div class="card mb-3">
+    <div class="card-header">
+        <h5><i class="fas fa-users"></i> UC3.3: Thiết lập hệ số lớp</h5>
+    </div>
+    <div class="card-body">
+        <form id="class-coefficients-form">
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Sĩ số lớp</th>
+                            <th>Hệ số</th>
+                            <th>Mô tả</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Dưới 20 SV</td>
+                            <td><input type="number" id="coeff-under-20" class="form-control" step="0.1" value="-0.3"></td>
+                            <td>Lớp ít sinh viên</td>
+                        </tr>
+                        <tr>
+                            <td>20-29 SV</td>
+                            <td><input type="number" id="coeff-20-29" class="form-control" step="0.1" value="-0.2"></td>
+                            <td>Lớp nhỏ</td>
+                        </tr>
+                        <tr>
+                            <td>30-39 SV</td>
+                            <td><input type="number" id="coeff-30-39" class="form-control" step="0.1" value="-0.1"></td>
+                            <td>Lớp vừa</td>
+                        </tr>
+                        <tr>
+                            <td>40-49 SV</td>
+                            <td><input type="number" id="coeff-40-49" class="form-control" step="0.1" value="0.0"></td>
+                            <td>Lớp chuẩn</td>
+                        </tr>
+                        <tr>
+                            <td>50-59 SV</td>
+                            <td><input type="number" id="coeff-50-59" class="form-control" step="0.1" value="0.1"></td>
+                            <td>Lớp lớn</td>
+                        </tr>
+                        <tr>
+                            <td>60-69 SV</td>
+                            <td><input type="number" id="coeff-60-69" class="form-control" step="0.1" value="0.2"></td>
+                            <td>Lớp rất lớn</td>
+                        </tr>
+                        <tr>
+                            <td>70-79 SV</td>
+                            <td><input type="number" id="coeff-70-79" class="form-control" step="0.1" value="0.3"></td>
+                            <td>Lớp siêu lớn</td>
+                        </tr>
+                        <tr>
+                            <td>Từ 80 SV trở lên</td>
+                            <td><input type="number" id="coeff-over-80" class="form-control" step="0.1" value="0.4"></td>
+                            <td>Lớp khổng lồ</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <button type="submit" class="btn btn-success" id="class-coefficients-btn">
+                <i class="fas fa-save"></i> Lưu hệ số lớp
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Handle hourly rate form
+    document.getElementById('hourly-rate-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const btn = document.getElementById('hourly-rate-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
+        
+        const formData = {
+            base_hourly_rate: parseInt(document.getElementById('base-hourly-rate').value)
+        };
+
+        fetch('/api/salary-settings', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('Định mức tiền đã được cập nhật!', 'success');
+            } else {
+                showAlert('Lỗi: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save"></i> Lưu định mức';
+        });
+    });
+
+    // Handle degree coefficients form
+    document.getElementById('degree-coefficients-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const btn = document.getElementById('degree-coefficients-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
+        
+        const formData = {
+            degree_coefficients: {
+                dai_hoc: parseFloat(document.getElementById('coeff-dai-hoc').value),
+                thac_si: parseFloat(document.getElementById('coeff-thac-si').value),
+                tien_si: parseFloat(document.getElementById('coeff-tien-si').value),
+                pho_giao_su: parseFloat(document.getElementById('coeff-pho-giao-su').value),
+                giao_su: parseFloat(document.getElementById('coeff-giao-su').value || 2.0)
+            }
+        };
+
+        fetch('/api/salary-settings', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('Hệ số bằng cấp đã được cập nhật!', 'success');
+            } else {
+                showAlert('Lỗi: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save"></i> Lưu hệ số bằng cấp';
+        });
+    });
+
+    // Handle class coefficients form
+    document.getElementById('class-coefficients-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const btn = document.getElementById('class-coefficients-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
+        
+        const formData = {
+            class_coefficients: {
+                under_20: parseFloat(document.getElementById('coeff-under-20').value),
+                '20_29': parseFloat(document.getElementById('coeff-20-29').value),
+                '30_39': parseFloat(document.getElementById('coeff-30-39').value),
+                '40_49': parseFloat(document.getElementById('coeff-40-49').value),
+                '50_59': parseFloat(document.getElementById('coeff-50-59').value),
+                '60_69': parseFloat(document.getElementById('coeff-60-69').value),
+                '70_79': parseFloat(document.getElementById('coeff-70-79').value),
+                over_80: parseFloat(document.getElementById('coeff-over-80').value)
+            }
+        };
+
+        fetch('/api/salary-settings', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('Hệ số lớp đã được cập nhật!', 'success');
+            } else {
+                showAlert('Lỗi: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            showAlert('Có lỗi xảy ra: ' + error.message, 'error');
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save"></i> Lưu hệ số lớp';
+        });
+    });
+
+    function showAlert(message, type) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="close" data-dismiss="alert">
+                <span>&times;</span>
+            </button>
+        `;
+        document.querySelector('.content').insertBefore(alertDiv, document.querySelector('.content').firstChild);
+        
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 5000);
+    }
+</script>
+{% endblock %}
