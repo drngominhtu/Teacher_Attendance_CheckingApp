@@ -34,28 +34,24 @@
                             <div class="form-group">
                                 <label for="semester-year">Năm học: <span class="text-danger">*</span></label>
                                 <input type="number" id="semester-year" name="year" class="form-control" required 
-                                    min="2020" max="2030" value="{{ current_year }}">
-                            </div>
-                            <div class="form-group">
-                                <label for="semester-start-date">Ngày bắt đầu: <span class="text-danger">*</span></label>
-                                <input type="date" id="semester-start-date" name="start_date" class="form-control" required>
+                                       min="2020" max="2030" value="{{ current_year }}">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
+                                <label for="semester-start-date">Ngày bắt đầu: <span class="text-danger">*</span></label>
+                                <input type="date" id="semester-start-date" name="start_date" class="form-control" required>
+                            </div>
+                            <div class="form-group">
                                 <label for="semester-end-date">Ngày kết thúc: <span class="text-danger">*</span></label>
                                 <input type="date" id="semester-end-date" name="end_date" class="form-control" required>
                             </div>
-                            <div class="form-group">
-                                <div class="form-check mt-3">
-                                    <input type="checkbox" id="semester-is-current" name="is_current" class="form-check-input">
-                                    <label for="semester-is-current" class="form-check-label">Đặt làm kỳ học hiện tại</label>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="semester-description">Mô tả kỳ học:</label>
-                                <textarea id="semester-description" name="description" class="form-control" rows="3" placeholder="Mô tả về kỳ học..."></textarea>
-                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="form-check">
+                            <input type="checkbox" id="semester-is-current" name="is_current" class="form-check-input">
+                            <label for="semester-is-current" class="form-check-label">Đặt làm kỳ học hiện tại</label>
                         </div>
                     </div>
                     <button type="submit" class="btn btn-success" id="submit-btn">
@@ -81,7 +77,6 @@
                                 <th>Năm học</th>
                                 <th>Thời gian</th>
                                 <th>Trạng thái</th>
-                                <th>Mô tả</th>
                                 <th>Thao tác</th>
                             </tr>
                         </thead>
@@ -98,7 +93,6 @@
                                     <span class="badge badge-secondary">Không hoạt động</span>
                                     {% endif %}
                                 </td>
-                                <td>{{ semester.description or '-' }}</td>
                                 <td>
                                     <button class="btn btn-warning btn-sm" onclick="editSemester({{ semester.id }})">
                                         <i class="fas fa-edit"></i> Sửa
@@ -110,7 +104,7 @@
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="6" class="text-center">Chưa có kỳ học nào</td>
+                                <td colspan="5" class="text-center">Chưa có kỳ học nào</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -139,26 +133,22 @@
                                 <label for="edit-semester-year">Năm học:</label>
                                 <input type="number" id="edit-semester-year" class="form-control" required min="2020" max="2030">
                             </div>
+                        </div>
+                        <div class="col-md-6">
                             <div class="form-group">
                                 <label for="edit-semester-start-date">Ngày bắt đầu:</label>
                                 <input type="date" id="edit-semester-start-date" class="form-control" required>
                             </div>
-                        </div>
-                        <div class="col-md-6">
                             <div class="form-group">
                                 <label for="edit-semester-end-date">Ngày kết thúc:</label>
                                 <input type="date" id="edit-semester-end-date" class="form-control" required>
                             </div>
-                            <div class="form-group">
-                                <div class="form-check mt-3">
-                                    <input type="checkbox" id="edit-semester-is-current" class="form-check-input">
-                                    <label for="edit-semester-is-current" class="form-check-label">Đặt làm kỳ học hiện tại</label>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="edit-semester-description">Mô tả:</label>
-                                <textarea id="edit-semester-description" class="form-control" rows="2"></textarea>
-                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="form-check">
+                            <input type="checkbox" id="edit-semester-is-current" class="form-check-input">
+                            <label for="edit-semester-is-current" class="form-check-label">Đặt làm kỳ học hiện tại</label>
                         </div>
                     </div>
                     <button type="submit" class="btn btn-success">Cập nhật</button>
@@ -188,8 +178,7 @@
                     year: parseInt(document.getElementById('semester-year').value),
                     start_date: document.getElementById('semester-start-date').value,
                     end_date: document.getElementById('semester-end-date').value,
-                    is_current: document.getElementById('semester-is-current').checked,
-                    description: document.getElementById('semester-description').value
+                    is_current: document.getElementById('semester-is-current').checked
                 };
 
                 fetch('/api/semesters', {
@@ -199,7 +188,12 @@
                     },
                     body: JSON.stringify(formData)
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.success) {
                         showAlert('Kỳ học đã được thêm thành công!', 'success');
@@ -212,6 +206,7 @@
                     }
                 })
                 .catch(error => {
+                    console.error('Error:', error);
                     showAlert('Có lỗi xảy ra: ' + error.message, 'error');
                 })
                 .finally(() => {
@@ -223,7 +218,12 @@
 
             function refreshSemestersList() {
                 fetch('/api/semesters/list')
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.success) {
                         updateSemestersTable(data.semesters);
@@ -239,7 +239,7 @@
                 tbody.innerHTML = '';
                 
                 if (semesters.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Chưa có kỳ học nào</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Chưa có kỳ học nào</td></tr>';
                     return;
                 }
                 
@@ -255,7 +255,6 @@
                                 '<span class="badge badge-secondary">Không hoạt động</span>'
                             }
                         </td>
-                        <td>${semester.description || '-'}</td>
                         <td>
                             <button class="btn btn-warning btn-sm" onclick="editSemester(${semester.id})">
                                 <i class="fas fa-edit"></i> Sửa
@@ -271,7 +270,12 @@
 
             function editSemester(id) {
                 fetch(`/api/semesters/${id}`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.success) {
                         const semester = data.semester;
@@ -281,7 +285,6 @@
                         document.getElementById('edit-semester-start-date').value = semester.start_date;
                         document.getElementById('edit-semester-end-date').value = semester.end_date;
                         document.getElementById('edit-semester-is-current').checked = semester.is_current;
-                        document.getElementById('edit-semester-description').value = semester.description || '';
                         
                         document.getElementById('edit-semester-modal').style.display = 'block';
                     } else {
@@ -289,6 +292,7 @@
                     }
                 })
                 .catch(error => {
+                    console.error('Error:', error);
                     showAlert('Có lỗi xảy ra: ' + error.message, 'error');
                 });
             }
@@ -307,8 +311,7 @@
                     year: parseInt(document.getElementById('edit-semester-year').value),
                     start_date: document.getElementById('edit-semester-start-date').value,
                     end_date: document.getElementById('edit-semester-end-date').value,
-                    is_current: document.getElementById('edit-semester-is-current').checked,
-                    description: document.getElementById('edit-semester-description').value
+                    is_current: document.getElementById('edit-semester-is-current').checked
                 };
 
                 fetch(`/api/semesters/${id}`, {
@@ -318,7 +321,12 @@
                     },
                     body: JSON.stringify(formData)
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.success) {
                         showAlert('Kỳ học đã được cập nhật thành công!', 'success');
@@ -331,6 +339,7 @@
                     }
                 })
                 .catch(error => {
+                    console.error('Error:', error);
                     showAlert('Có lỗi xảy ra: ' + error.message, 'error');
                 });
             });
@@ -340,7 +349,12 @@
                     fetch(`/api/semesters/${id}`, {
                         method: 'DELETE'
                     })
-                    .then(response => response.json())
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
                     .then(data => {
                         if (data.success) {
                             showAlert('Kỳ học đã được xóa thành công!', 'success');
@@ -352,6 +366,7 @@
                         }
                     })
                     .catch(error => {
+                        console.error('Error:', error);
                         showAlert('Có lỗi xảy ra: ' + error.message, 'error');
                     });
                 }
