@@ -17,45 +17,48 @@
         <nav class="sidebar-nav">
             <ul>
                 <li>
-                    <a href="{{ url_for('index') }}" class="active">
-                        <i class="fas fa-home"></i>
-                        Trang chủ
+                    <a href="{{ url_for('index') }}" {% if request.endpoint == 'index' %}class="active"{% endif %}>
+                        <i class="fas fa-home"></i> Trang chủ
                     </a>
                 </li>
-                <li>
-                    <a href="{{ url_for('degrees') }}">
-                        <i class="fas fa-graduation-cap"></i>
-                        Quản lý bằng cấp
+                <li class="has-dropdown">
+                    <a href="#" class="dropdown-toggle">
+                        <i class="fas fa-users"></i> Quản lý giảng viên
+                        <i class="fas fa-chevron-down dropdown-icon"></i>
                     </a>
+                    <ul class="dropdown-menu">
+                        <li><a href="{{ url_for('degrees') }}"><i class="fas fa-graduation-cap"></i> Quản lý bằng cấp</a></li>
+                        <li><a href="{{ url_for('departments') }}"><i class="fas fa-building"></i> Quản lý khoa</a></li>
+                        <li><a href="{{ url_for('teachers') }}"><i class="fas fa-user-tie"></i> Quản lý giảng viên</a></li>
+                        <li><a href="{{ url_for('teacher_statistics') }}"><i class="fas fa-chart-bar"></i> Thống kê giảng viên</a></li>
+                    </ul>
                 </li>
-                <li>
-                    <a href="{{ url_for('departments') }}">
-                        <i class="fas fa-building"></i>
-                        Quản lý khoa
+                <li class="has-dropdown">
+                    <a href="#" class="dropdown-toggle">
+                        <i class="fas fa-chalkboard-teacher"></i> Quản lý học phần
+                        <i class="fas fa-chevron-down dropdown-icon"></i>
                     </a>
+                    <ul class="dropdown-menu">
+                        <li><a href="{{ url_for('subjects') }}"><i class="fas fa-book"></i> Quản lý học phần</a></li>
+                        <li><a href="{{ url_for('semesters') }}"><i class="fas fa-calendar"></i> Quản lý kỳ học</a></li>
+                        <li><a href="{{ url_for('class_sections') }}"><i class="fas fa-chalkboard"></i> Quản lý lớp học phần</a></li>
+                        <li><a href="{{ url_for('teaching_assignments') }}"><i class="fas fa-user-clock"></i> Phân công giảng dạy</a></li>
+                    </ul>
                 </li>
-                <li>
-                    <a href="{{ url_for('teachers') }}">
-                        <i class="fas fa-users"></i>
-                        Quản lý giảng viên
+                <li class="has-dropdown">
+                    <a href="#" class="dropdown-toggle">
+                        <i class="fas fa-calculator"></i> Tính tiền dạy
+                        <i class="fas fa-chevron-down dropdown-icon"></i>
                     </a>
+                    <ul class="dropdown-menu">
+                        <li><a href="{{ url_for('salary_settings') }}"><i class="fas fa-cog"></i> Cài đặt hệ số</a></li>
+                        <li><a href="{{ url_for('salary_calculations') }}"><i class="fas fa-calculator"></i> Tính tiền dạy</a></li>
+                        <li><a href="{{ url_for('salary_history') }}"><i class="fas fa-history"></i> Lịch sử tính toán</a></li>
+                    </ul>
                 </li>
-                <li>
-                    <a href="{{ url_for('subjects') }}">
-                        <i class="fas fa-book"></i>
-                        Quản lý học phần
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('semesters') }}">
-                        <i class="fas fa-calendar-alt"></i>
-                        Quản lý kì học
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('teaching_assignments') }}">
-                        <i class="fas fa-user-tie"></i>
-                        Phân công giảng viên
+                <li class="nav-item">
+                    <a class="nav-link" href="/reports">
+                        <i class="fas fa-chart-line"></i> Báo cáo
                     </a>
                 </li>
             </ul>
