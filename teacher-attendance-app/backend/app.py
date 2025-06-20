@@ -496,24 +496,144 @@ def calculate_teacher_statistics():
         
         # Calculate average age
         from sqlalchemy import func
-        avg_age_result = db.session.query(func.avg(
-            func.julianday('now') - func.julianday(Teacher.birth_date)
-        ) / 365.25).filter(Teacher.birth_date.isnot(None)).scalar()
-        stats['avg_age'] = avg_age_result or 0
+        current_date = datetime.now().date()
+        teachers_with_birth_date = Teacher.query.filter(
+            Teacher.birth_date.isnot(None),
+            Teacher.is_active == True
+        ).all()
         
-        # PhD count (approximate based on degree_id)
+        if teachers_with_birth_date:
+            total_age = 0
+            count = 0
+            for teacher in teachers_with_birth_date:
+                age = (current_date - teacher.birth_date).days / 365.25
+                total_age += age
+                count += 1
+            stats['avg_age'] = total_age / count if count > 0 else 0
+        
+        # PhD count based on degree names
         try:
-            phd_degree = Degree.query.filter(Degree.name.like('%Tiến sĩ%')).first()
-            if phd_degree:
-                stats['phd_teachers'] = Teacher.query.filter_by(degree_id=phd_degree.id, is_active=True).count()
-        except:
-            pass
+            if 'Degree' in globals():
+                phd_degrees = Degree.query.filter(
+                    Degree.name.like('%Tiến sĩ%') | 
+                    Degree.name.like('%PhD%') |
+                    Degree.name.like('%TS%')
+                ).all()
+                
+                phd_degree_ids = [degree.id for degree in phd_degrees]
+                if phd_degree_ids:
+                    stats['phd_teachers'] = Teacher.query.filter(
+                        Teacher.degree_id.in_(phd_degree_ids),
+                        Teacher.is_active == True
+                    ).count()
+        except Exception as e:
+            print(f"Error counting PhD teachers: {e}")
+        
+        # Department statistics
+        if 'Department' in globals():
+            departments = Department.query.filter_by(is_active=True).all()
+            dept_stats = []
+            dept_labels = []
+            dept_data = []
+            
+            for dept in departments:
+                dept_teachers = Teacher.query.filter_by(
+                    department_id=dept.id, 
+                    is_active=True
+                ).all()
+                
+                if len(dept_teachers) == 0:
+                    continue
+                
+                # Count degrees in this department
+                phd_count = 0
+                master_count = 0
+                bachelor_count = 0
+                dept_total_age = 0
+                dept_age_count = 0
+                
+                for teacher in dept_teachers:
+                    # Count by degree
+                    if teacher.degree_id:
+                        try:
+                            degree = Degree.query.get(teacher.degree_id)
+                            if degree:
+                                degree_name = degree.name.lower()
+                                if 'tiến sĩ' in degree_name or 'phd' in degree_name or 'ts' in degree_name:
+                                    phd_count += 1
+                                elif 'thạc sĩ' in degree_name or 'master' in degree_name or 'ths' in degree_name:
+                                    master_count += 1
+                                else:
+                                    bachelor_count += 1
+                        except:
+                            bachelor_count += 1
+                    else:
+                        bachelor_count += 1
+                    
+                    # Calculate age
+                    if teacher.birth_date:
+                        age = (current_date - teacher.birth_date).days / 365.25
+                        dept_total_age += age
+                        dept_age_count += 1
+                
+                dept_avg_age = dept_total_age / dept_age_count if dept_age_count > 0 else 0
+                
+                dept_stat = {
+                    'department_name': dept.name,
+                    'total_teachers': len(dept_teachers),
+                    'active_teachers': len(dept_teachers),
+                    'phd_teachers': phd_count,
+                    'master_teachers': master_count,
+                    'bachelor_teachers': bachelor_count,
+                    'avg_age': dept_avg_age
+                }
+                
+                dept_stats.append(dept_stat)
+                dept_labels.append(dept.name)
+                dept_data.append(len(dept_teachers))
+            
+            stats['department_stats'] = dept_stats
+            stats['department_chart_data'] = {
+                'labels': dept_labels,
+                'data': dept_data
+            }
+        
+        # Degree statistics for chart
+        if 'Degree' in globals():
+            degrees = Degree.query.filter_by(is_active=True).all()
+            degree_labels = []
+            degree_data = []
+            
+            for degree in degrees:
+                count = Teacher.query.filter_by(
+                    degree_id=degree.id,
+                    is_active=True
+                ).count()
+                
+                if count > 0:
+                    degree_labels.append(degree.name)
+                    degree_data.append(count)
+            
+            stats['degree_chart_data'] = {
+                'labels': degree_labels,
+                'data': degree_data
+            }
         
         return stats
         
     except Exception as e:
         print(f"Error calculating teacher statistics: {e}")
-        return {}
+        import traceback
+        traceback.print_exc()
+        return {
+            'total_teachers': 0,
+            'active_teachers': 0,
+            'phd_teachers': 0,
+            'avg_age': 0,
+            'department_stats': [],
+            'department_chart_data': {'labels': [], 'data': []},
+            'degree_chart_data': {'labels': [], 'data': []}
+        }
 
 def calculate_class_statistics():
     """Calculate class statistics"""
@@ -1797,126 +1917,6 @@ def api_update_semester(id):
         # Handle dates
         if data.get('start_date'):
             from datetime import datetime as dt_parser
-            try:
-                semester.start_date = dt_parser.strptime(data['start_date'], '%Y-%m-%d').date()
-            except ValueError:
-                return jsonify({'success': False, 'message': 'Định dạng ngày bắt đầu không hợp lệ'})
-                
-        if data.get('end_date'):
-            from datetime import datetime as dt_parser
-            try:
-                semester.end_date = dt_parser.strptime(data['end_date'], '%Y-%m-%d').date()
-            except ValueError:
-                return jsonify({'success': False, 'message': 'Định dạng ngày kết thúc không hợp lệ'})
-        
-        # Handle is_current
-        if data.get('is_current') and not semester.is_current:
-            # Make all others non-current first
-            Semester.query.update({'is_current': False})
-            semester.is_current = True
-        elif 'is_current' in data and not data['is_current']:
-            semester.is_current = False
-        
-        db.session.commit()
-        
-        return jsonify({'success': True, 'message': 'Kỳ học đã được cập nhật thành công!'})
-        
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error updating semester: {e}")
-        return jsonify({'success': False, 'message': str(e)})
-
-@app.route('/api/semesters/<int:id>', methods=['DELETE'])
-def api_delete_semester(id):
-    try:
-        semester = Semester.query.get(id)
-        if not semester:
-            return jsonify({'success': False, 'message': 'Không tìm thấy kỳ học'})
-        
-        # Check if any teaching assignments are using this semester
-        try:
-            if 'TeachingAssignment' in globals():
-                assignment_count = TeachingAssignment.query.filter_by(semester_id=id).count()
-                if assignment_count > 0:
-                    return jsonify({'success': False, 'message': f'Không thể xóa kỳ học đang có {assignment_count} phân công giảng dạy'})
-        except:
-            pass
-        
-        # Check if any class sections are using this semester
-        try:
-            if 'ClassSection' in globals():
-                class_count = ClassSection.query.filter_by(semester_id=id).count()
-                if class_count > 0:
-                    return jsonify({'success': False, 'message': f'Không thể xóa kỳ học đang có {class_count} lớp học phần'})
-        except:
-            pass
-        
-        db.session.delete(semester)
-        db.session.commit()
-        
-        return jsonify({'success': True, 'message': 'Kỳ học đã được xóa thành công!'})
-        
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error deleting semester: {e}")
-        return jsonify({'success': False, 'message': str(e)})
-
-@app.route('/api/semesters/<int:id>', methods=['GET'])
-def api_get_semester(id):
-    try:
-        semester = Semester.query.get(id)
-        if not semester:
-            return jsonify({'success': False, 'message': 'Không tìm thấy kỳ học'})
-        
-        # Create safe semester dict without description if it doesn't exist
-        semester_dict = {
-            'id': semester.id,
-            'name': semester.name,
-            'year': semester.year,
-            'start_date': semester.start_date.isoformat() if semester.start_date else None,
-            'end_date': semester.end_date.isoformat() if semester.end_date else None,
-            'is_current': semester.is_current
-        }
-        
-        # Add description only if it exists
-        if hasattr(semester, 'description'):
-            semester_dict['description'] = semester.description
-        
-        return jsonify({'success': True, 'semester': semester_dict})
-    except Exception as e:
-        print(f"Error getting semester: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'success': False, 'message': str(e)})
-
-@app.route('/api/semesters/list', methods=['GET'])
-def api_get_semesters_list():
-    try:
-        # Get filter parameter
-        year = request.args.get('year')
-        
-        query = Semester.query.filter_by(is_active=True)
-        if year:
-            query = query.filter_by(year=int(year))
-        
-        semesters = query.order_by(Semester.year.desc(), Semester.name.desc()).all()
-        
-        # Create safe semester data
-        semesters_data = []
-        for semester in semesters:
-            semester_dict = {
-                'id': semester.id,
-                'name': semester.name,
-                'year': semester.year,
-                'start_date': semester.start_date.isoformat() if semester.start_date else None,
-                'end_date': semester.end_date.isoformat() if semester.end_date else None,
-                'is_current': semester.is_current
-            }
-            
-            # Add description only if it exists
-            if hasattr(semester, 'description'):
-                semester_dict['description'] = semester.description
-                
             semesters_data.append(semester_dict)
         
         return jsonify({'success': True, 'semesters': semesters_data})
