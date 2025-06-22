@@ -1,0 +1,431 @@
+{% extends "base.html" %}
+
+{% block title %}Thống kê học phần{% endblock %}
+{% block page_title %}Thống kê học phần{% endblock %}
+{% block breadcrumb %}Trang chủ / Báo cáo / Thống kê học phần{% endblock %}
+
+{% block content %}
+<!-- Overview Cards -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 id="total-subjects">{{ stats.total_subjects or 0 }}</h4>
+                        <p class="mb-0">Tổng số học phần</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-book fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 id="active-subjects">{{ stats.active_subjects or 0 }}</h4>
+                        <p class="mb-0">Học phần đang dạy</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-chalkboard-teacher fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 id="total-credits">{{ stats.total_credits or 0 }}</h4>
+                        <p class="mb-0">Tổng số tín chỉ</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-certificate fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 id="avg-credits">{{ "%.1f"|format(stats.avg_credits or 0) }}</h4>
+                        <p class="mb-0">TC trung bình</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-calculator fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row">
+    <!-- Department Distribution Chart -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-pie"></i> Phân bố học phần theo khoa</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="departmentChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Credits Distribution Chart -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-doughnut"></i> Phân bố theo số tín chỉ</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="creditsChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Statistics Table -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-table"></i> Thống kê chi tiết theo khoa</h5>
+                <button class="btn btn-primary btn-sm" onclick="refreshStatistics()">
+                    <i class="fas fa-sync-alt"></i> Làm mới
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover" id="department-stats-table">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th>Khoa</th>
+                                <th>Số học phần</th>
+                                <th>Đang dạy</th>
+                                <th>Tổng TC</th>
+                                <th>TC TB</th>
+                                <th>Tổng lớp</th>
+                                <th>Khó (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="department-stats-body">
+                            <!-- Data will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Subject Type Distribution Chart -->
+<div class="row mt-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-bar"></i> Phân bố theo mức độ khó</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="difficultyChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> Thông tin thống kê</h5>
+            </div>
+            <div class="card-body">
+                <div class="statistic-item mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Học phần khó:</span>
+                        <strong id="hard-percentage">0%</strong>
+                    </div>
+                    <div class="progress mt-1">
+                        <div class="progress-bar bg-danger" id="hard-progress" style="width: 0%"></div>
+                    </div>
+                </div>
+                
+                <div class="statistic-item mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Học phần có lớp:</span>
+                        <strong id="with-classes-percentage">0%</strong>
+                    </div>
+                    <div class="progress mt-1">
+                        <div class="progress-bar bg-success" id="with-classes-progress" style="width: 0%"></div>
+                    </div>
+                </div>
+                
+                <div class="statistic-item mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Tỷ lệ hoạt động:</span>
+                        <strong id="active-percentage">0%</strong>
+                    </div>
+                    <div class="progress mt-1">
+                        <div class="progress-bar bg-primary" id="active-progress" style="width: 0%"></div>
+                    </div>
+                </div>
+                
+                <hr>
+                <div class="text-center">
+                    <button class="btn btn-outline-primary btn-sm" onclick="exportStatistics()">
+                        <i class="fas fa-download"></i> Xuất báo cáo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    let departmentChart, creditsChart, difficultyChart;
+    
+    // Initialize charts when document is ready
+    document.addEventListener('DOMContentLoaded', function() {
+        loadStatistics();
+    });
+    
+    function loadStatistics() {
+        fetch('/api/statistics/subject')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateStatistics(data.statistics);
+                createCharts(data.statistics);
+            } else {
+                showAlert('Lỗi: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('Có lỗi xảy ra khi tải thống kê', 'error');
+        });
+    }
+    
+    function updateStatistics(stats) {
+        // Update overview cards
+        document.getElementById('total-subjects').textContent = stats.total_subjects || 0;
+        document.getElementById('active-subjects').textContent = stats.active_subjects || 0;
+        document.getElementById('total-credits').textContent = stats.total_credits || 0;
+        document.getElementById('avg-credits').textContent = (stats.avg_credits || 0).toFixed(1);
+        
+        // Calculate percentages
+        const total = stats.total_subjects || 1;
+        const hardPercentage = ((stats.hard_subjects || 0) / total * 100).toFixed(1);
+        const withClassesPercentage = ((stats.subjects_with_classes || 0) / total * 100).toFixed(1);
+        const activePercentage = ((stats.active_subjects || 0) / total * 100).toFixed(1);
+        
+        // Update progress bars
+        document.getElementById('hard-percentage').textContent = hardPercentage + '%';
+        document.getElementById('hard-progress').style.width = hardPercentage + '%';
+        
+        document.getElementById('with-classes-percentage').textContent = withClassesPercentage + '%';
+        document.getElementById('with-classes-progress').style.width = withClassesPercentage + '%';
+        
+        document.getElementById('active-percentage').textContent = activePercentage + '%';
+        document.getElementById('active-progress').style.width = activePercentage + '%';
+        
+        // Update department stats table
+        updateDepartmentTable(stats.department_stats || []);
+    }
+    
+    function createCharts(stats) {
+        // Department Chart
+        if (departmentChart) departmentChart.destroy();
+        const deptCtx = document.getElementById('departmentChart').getContext('2d');
+        
+        const deptData = stats.department_chart_data || { labels: [], data: [] };
+        departmentChart = new Chart(deptCtx, {
+            type: 'pie',
+            data: {
+                labels: deptData.labels.length > 0 ? deptData.labels : ['Chưa có dữ liệu'],
+                datasets: [{
+                    data: deptData.data.length > 0 ? deptData.data : [1],
+                    backgroundColor: [
+                        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
+                        '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+        
+        // Credits Chart
+        if (creditsChart) creditsChart.destroy();
+        const creditsCtx = document.getElementById('creditsChart').getContext('2d');
+        
+        const creditsData = stats.credits_chart_data || { labels: [], data: [] };
+        creditsChart = new Chart(creditsCtx, {
+            type: 'doughnut',
+            data: {
+                labels: creditsData.labels.length > 0 ? creditsData.labels : ['Chưa có dữ liệu'],
+                datasets: [{
+                    data: creditsData.data.length > 0 ? creditsData.data : [1],
+                    backgroundColor: ['#4BC0C0', '#36A2EB', '#FFCE56', '#FF6384', '#9966FF']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+        
+        // Difficulty Chart
+        if (difficultyChart) difficultyChart.destroy();
+        const difficultyCtx = document.getElementById('difficultyChart').getContext('2d');
+        
+        const difficultyLabels = ['Bình thường', 'Khó', 'Rất khó'];
+        const difficultyData = [
+            stats.normal_subjects || 0,
+            stats.hard_subjects || 0,
+            stats.very_hard_subjects || 0
+        ];
+        
+        difficultyChart = new Chart(difficultyCtx, {
+            type: 'bar',
+            data: {
+                labels: difficultyLabels,
+                datasets: [{
+                    label: 'Số học phần',
+                    data: difficultyData,
+                    backgroundColor: ['#28a745', '#ffc107', '#dc3545'],
+                    borderColor: ['#1e7e34', '#e0a800', '#c82333'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    }
+    
+    function updateDepartmentTable(deptStats) {
+        const tbody = document.getElementById('department-stats-body');
+        tbody.innerHTML = '';
+        
+        if (deptStats.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center">Chưa có dữ liệu thống kê</td></tr>';
+            return;
+        }
+        
+        deptStats.forEach(dept => {
+            const row = document.createElement('tr');
+            const hardRate = dept.total_subjects > 0 ? (dept.hard_subjects / dept.total_subjects * 100).toFixed(1) : 0;
+            
+            row.innerHTML = `
+                <td><strong>${dept.department_name}</strong></td>
+                <td class="text-center">${dept.total_subjects}</td>
+                <td class="text-center">${dept.active_subjects}</td>
+                <td class="text-center">${dept.total_credits}</td>
+                <td class="text-center">${dept.avg_credits.toFixed(1)}</td>
+                <td class="text-center">${dept.total_classes}</td>
+                <td class="text-center">
+                    <span class="badge badge-${hardRate > 30 ? 'danger' : hardRate > 15 ? 'warning' : 'success'}">
+                        ${hardRate}%
+                    </span>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+    
+    function refreshStatistics() {
+        showAlert('Đang tải lại thống kê...', 'info');
+        loadStatistics();
+    }
+    
+    function exportStatistics() {
+        // Create simple CSV export
+        const table = document.getElementById('department-stats-table');
+        let csv = '';
+        
+        // Headers
+        const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent);
+        csv += headers.join(',') + '\n';
+        
+        // Data rows
+        const rows = table.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+            const cells = Array.from(row.querySelectorAll('td')).map(td => {
+                return '"' + td.textContent.replace(/"/g, '""') + '"';
+            });
+            csv += cells.join(',') + '\n';
+        });
+        
+        // Download
+        const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'thong_ke_hoc_phan.csv';
+        link.click();
+        
+        showAlert('Đã xuất báo cáo thành công!', 'success');
+    }
+    
+    function showAlert(message, type) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        `;
+        document.querySelector('.content').insertBefore(alertDiv, document.querySelector('.content').firstChild);
+        
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 5000);
+    }
+</script>
+{% endblock %}

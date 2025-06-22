@@ -138,7 +138,39 @@
                             </div>
 
                             <!-- Nhóm 3: Tính tiền dạy -->
-                            
+                            <div class="feature-group mb-4">
+                                <h5><i class="fas fa-calculator text-info"></i> Quản lý lương</h5>
+                                <div class="feature-buttons">
+                                    <a href="{{ url_for('salary_settings') }}" class="btn btn-outline-info btn-sm">
+                                        <i class="fas fa-cog"></i> Cài đặt
+                                    </a>
+                                    <a href="{{ url_for('salary_calculations') }}" class="btn btn-outline-info btn-sm">
+                                        <i class="fas fa-calculator"></i> Tính lương
+                                    </a>
+                                    <a href="{{ url_for('salary_history') }}" class="btn btn-outline-info btn-sm">
+                                        <i class="fas fa-history"></i> Lịch sử
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Nhóm 4: Báo cáo -->
+                            <div class="feature-group mb-4">
+                                <h5><i class="fas fa-chart-line text-warning"></i> Báo cáo & Thống kê</h5>
+                                <div class="feature-buttons">
+                                    <a href="{{ url_for('reports') }}" class="btn btn-outline-warning btn-sm">
+                                        <i class="fas fa-file-alt"></i> Báo cáo tiền dạy
+                                    </a>
+                                    <a href="{{ url_for('teacher_statistics') }}" class="btn btn-outline-warning btn-sm">
+                                        <i class="fas fa-chart-bar"></i> TK giảng viên
+                                    </a>
+                                    <a href="{{ url_for('subject_statistics') }}" class="btn btn-outline-warning btn-sm">
+                                        <i class="fas fa-chart-line"></i> TK học phần
+                                    </a>
+                                    <a href="{{ url_for('class_statistics') }}" class="btn btn-outline-warning btn-sm">
+                                        <i class="fas fa-chart-pie"></i> TK lớp học
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -205,6 +237,14 @@
                                 <a href="{{ url_for('teaching_assignments') }}" class="quick-access-item">
                                     <i class="fas fa-user-clock"></i>
                                     <span>Phân công</span>
+                                </a>
+                                <a href="{{ url_for('subject_statistics') }}" class="quick-access-item">
+                                    <i class="fas fa-chart-line"></i>
+                                    <span>TK học phần</span>
+                                </a>
+                                <a href="{{ url_for('reports') }}" class="quick-access-item">
+                                    <i class="fas fa-chart-line"></i>
+                                    <span>Báo cáo</span>
                                 </a>
                             </div>
                         </div>

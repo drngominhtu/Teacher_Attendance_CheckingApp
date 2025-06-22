@@ -474,6 +474,15 @@ def class_statistics():
         print(f"Error in class statistics route: {e}")
         return render_template('class_statistics.html', stats={})
 
+@app.route('/subject-statistics')
+def subject_statistics():
+    try:
+        stats = calculate_subject_statistics()
+        return render_template('subject_statistics.html', stats=stats)
+    except Exception as e:
+        print(f"Error in subject statistics route: {e}")
+        return render_template('subject_statistics.html', stats={})
+
 def calculate_teacher_statistics():
     """Calculate teacher statistics"""
     try:
@@ -666,6 +675,143 @@ def calculate_class_statistics():
     except Exception as e:
         print(f"Error calculating class statistics: {e}")
         return {}
+
+def calculate_subject_statistics():
+    """Calculate subject statistics"""
+    try:
+        stats = {
+            'total_subjects': 0,
+            'active_subjects': 0,
+            'total_credits': 0,
+            'avg_credits': 0,
+            'hard_subjects': 0,
+            'normal_subjects': 0,
+            'very_hard_subjects': 0,
+            'subjects_with_classes': 0,
+            'department_stats': [],
+            'department_chart_data': {'labels': [], 'data': []},
+            'credits_chart_data': {'labels': [], 'data': []}
+        }
+        
+        if 'Subject' not in globals():
+            return stats
+            
+        # Basic counts
+        stats['total_subjects'] = Subject.query.count()
+        stats['active_subjects'] = Subject.query.filter_by(is_active=True).count()
+        
+        # Credits statistics
+        from sqlalchemy import func
+        total_credits = db.session.query(func.sum(Subject.credits)).filter_by(is_active=True).scalar()
+        stats['total_credits'] = total_credits or 0
+        
+        if stats['active_subjects'] > 0:
+            stats['avg_credits'] = stats['total_credits'] / stats['active_subjects']
+        
+        # Difficulty level counts
+        stats['normal_subjects'] = Subject.query.filter_by(
+            difficulty_level='normal', is_active=True
+        ).count()
+        stats['hard_subjects'] = Subject.query.filter_by(
+            difficulty_level='hard', is_active=True
+        ).count()
+        stats['very_hard_subjects'] = Subject.query.filter_by(
+            difficulty_level='very_hard', is_active=True
+        ).count()
+        
+        # Subjects with classes count
+        if 'ClassSection' in globals():
+            subjects_with_classes = db.session.query(ClassSection.subject_id).filter_by(
+                is_active=True
+            ).distinct().count()
+            stats['subjects_with_classes'] = subjects_with_classes
+        
+        # Department statistics
+        if 'Department' in globals():
+            departments = Department.query.filter_by(is_active=True).all()
+            dept_stats = []
+            dept_labels = []
+            dept_data = []
+            
+            for dept in departments:
+                dept_subjects = Subject.query.filter_by(
+                    department_id=dept.id, 
+                    is_active=True
+                ).all()
+                
+                if len(dept_subjects) == 0:
+                    continue
+                
+                # Calculate department statistics
+                dept_total_credits = sum(s.credits for s in dept_subjects)
+                dept_avg_credits = dept_total_credits / len(dept_subjects) if len(dept_subjects) > 0 else 0
+                
+                # Count by difficulty
+                dept_hard_subjects = len([s for s in dept_subjects if s.difficulty_level in ['hard', 'very_hard']])
+                
+                # Count classes for this department
+                dept_total_classes = 0
+                if 'ClassSection' in globals():
+                    dept_total_classes = db.session.query(ClassSection).join(Subject).filter(
+                        Subject.department_id == dept.id,
+                        ClassSection.is_active == True
+                    ).count()
+                
+                dept_stat = {
+                    'department_name': dept.name,
+                    'total_subjects': len(dept_subjects),
+                    'active_subjects': len(dept_subjects),
+                    'total_credits': dept_total_credits,
+                    'avg_credits': dept_avg_credits,
+                    'hard_subjects': dept_hard_subjects,
+                    'total_classes': dept_total_classes
+                }
+                
+                dept_stats.append(dept_stat)
+                dept_labels.append(dept.name)
+                dept_data.append(len(dept_subjects))
+            
+            stats['department_stats'] = dept_stats
+            stats['department_chart_data'] = {
+                'labels': dept_labels,
+                'data': dept_data
+            }
+        
+        # Credits distribution for chart
+        credits_distribution = {}
+        active_subjects = Subject.query.filter_by(is_active=True).all()
+        for subject in active_subjects:
+            credits = subject.credits
+            if credits in credits_distribution:
+                credits_distribution[credits] += 1
+            else:
+                credits_distribution[credits] = 1
+        
+        if credits_distribution:
+            stats['credits_chart_data'] = {
+                'labels': [f'{k} TC' for k in sorted(credits_distribution.keys())],
+                'data': [credits_distribution[k] for k in sorted(credits_distribution.keys())]
+            }
+        
+        return stats
+        
+    except Exception as e:
+        print(f"Error calculating subject statistics: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            'total_subjects': 0,
+            'active_subjects': 0,
+            'total_credits': 0,
+            'avg_credits': 0,
+            'hard_subjects': 0,
+            'normal_subjects': 0,
+            'very_hard_subjects': 0,
+            'subjects_with_classes': 0,
+            'department_stats': [],
+            'department_chart_data': {'labels': [], 'data': []},
+            'credits_chart_data': {'labels': [], 'data': []}
+        }
 
 # API Routes
 @app.route('/api/subjects', methods=['POST'])
@@ -1835,95 +1981,13 @@ def api_class_statistics():
         print(f"Error getting class statistics: {e}")
         return jsonify({'success': False, 'message': str(e)})
 
-# API Routes for Semesters
-@app.route('/api/semesters', methods=['POST'])
-def api_create_semester():
+@app.route('/api/statistics/subject', methods=['GET'])
+def api_subject_statistics():
     try:
-        data = request.get_json()
-        
-        if not data:
-            return jsonify({'success': False, 'message': 'Không có dữ liệu được gửi'})
-        
-        # Validate required fields
-        required_fields = ['name', 'year', 'start_date', 'end_date']
-        for field in required_fields:
-            if not data.get(field):
-                return jsonify({'success': False, 'message': f'{field} không được để trống'})
-        
-        # Check for existing semester
-        existing = Semester.query.filter_by(name=data['name'], year=data['year']).first()
-        if existing:
-            return jsonify({'success': False, 'message': 'Kỳ học này đã tồn tại'})
-        
-        # Parse dates
-        from datetime import datetime as dt_parser
-        try:
-            start_date = dt_parser.strptime(data['start_date'], '%Y-%m-%d').date()
-            end_date = dt_parser.strptime(data['end_date'], '%Y-%m-%d').date()
-        except ValueError:
-            return jsonify({'success': False, 'message': 'Định dạng ngày không hợp lệ'})
-        
-        # Create semester with only existing fields
-        semester = Semester(
-            name=data['name'],
-            year=int(data['year']),
-            start_date=start_date,
-            end_date=end_date,
-            is_current=data.get('is_current', False)
-        )
-        
-        # Add description only if the field exists
-        if hasattr(Semester, 'description'):
-            semester.description = data.get('description', '')
-        
-        # If this is set as current, make all others non-current
-        if semester.is_current:
-            Semester.query.update({'is_current': False})
-        
-        db.session.add(semester)
-        db.session.commit()
-        
-        return jsonify({'success': True, 'message': 'Kỳ học đã được tạo thành công!'})
-        
+        stats = calculate_subject_statistics()
+        return jsonify({'success': True, 'statistics': stats})
     except Exception as e:
-        db.session.rollback()
-        print(f"Error creating semester: {e}")
-        return jsonify({'success': False, 'message': str(e)})
-
-@app.route('/api/semesters/<int:id>', methods=['PUT'])
-def api_update_semester(id):
-    try:
-        semester = Semester.query.get(id)
-        if not semester:
-            return jsonify({'success': False, 'message': 'Không tìm thấy kỳ học'})
-        
-        data = request.get_json()
-        
-        # Check for existing semester with same name/year (exclude current)
-        if data.get('name') and data.get('year'):
-            if data['name'] != semester.name or int(data['year']) != semester.year:
-                existing = Semester.query.filter_by(name=data['name'], year=int(data['year'])).first()
-                if existing:
-                    return jsonify({'success': False, 'message': 'Kỳ học này đã tồn tại'})
-        
-        # Update fields
-        semester.name = data.get('name', semester.name)
-        semester.year = int(data.get('year', semester.year))
-        
-        # Update description only if the field exists
-        if hasattr(semester, 'description') and data.get('description') is not None:
-            semester.description = data.get('description', '')
-        
-        # Handle dates
-        if data.get('start_date'):
-            from datetime import datetime as dt_parser
-            semesters_data.append(semester_dict)
-        
-        return jsonify({'success': True, 'semesters': semesters_data})
-    except Exception as e:
-        print(f"Error getting semesters list: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"Error getting subject statistics: {e}")
         return jsonify({'success': False, 'message': str(e)})
 
 # Reports Routes
