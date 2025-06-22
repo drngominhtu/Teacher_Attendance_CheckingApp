@@ -9,6 +9,32 @@
 
 ---
 
+## 🎯 CÁCH TẠO DỮ LIỆU MẪU
+
+### Bước 1: Tạo dữ liệu cơ bản
+```bash
+# Đảm bảo server đang chạy
+python backend/app.py
+
+# Trong terminal khác, tạo dữ liệu mẫu
+python create_sample_data.py
+```
+
+**Script sẽ tạo:**
+- 📁 **12 khoa** với tên thực tế (CNTT, Toán, Vật lý...)
+- 🎓 **8 bằng cấp** (CN, ThS, TS, PGS, GS...)
+- 👨‍🏫 **80 giảng viên** với tên Việt Nam
+- 📚 **150 học phần** phù hợp từng khoa
+- 📅 **15 kỳ học** (3 năm trước đến 2 năm sau)
+
+### Bước 2: Kiểm tra dữ liệu
+```bash
+# Chạy test để verify
+python test_application.py
+```
+
+---
+
 ## 🎯 CÁC KỊCH BẢN KIỂM THỬ
 
 ### 1. KIỂM THỬ KẾT NỐI & TRANG CHỦ
@@ -230,18 +256,32 @@
 
 ---
 
-## 📊 METRICS & KẾT QUẢ
+## 💾 DATA MANAGEMENT
 
-### Thông số đo lường:
-- **Tổng số test cases**: ~30-40 tests
-- **Thời gian chạy**: 30-60 giây
-- **Tỷ lệ thành công mong đợi**: >80%
-- **Coverage**: Tất cả main endpoints
+### Tạo dữ liệu lớn:
+```python
+# Tùy chỉnh số lượng trong create_sample_data.py
+creator.create_teachers(200)  # 200 giảng viên
+creator.create_subjects(300)  # 300 học phần
+```
 
-### Kết quả report:
-- **Console output**: Real-time với emoji status
-- **JSON file**: Chi tiết timestamp, duration, results
-- **Summary**: Pass/fail count, success rate, failed tests list
+### Reset database:
+```bash
+# Xóa file database
+rm backend/instance/teacher_attendance.db
+
+# Chạy lại app để tạo tables mới
+python backend/app.py
+
+# Tạo lại dữ liệu
+python create_sample_data.py
+```
+
+### Backup data:
+```bash
+# Copy database file
+cp backend/instance/teacher_attendance.db backup_$(date +%Y%m%d).db
+```
 
 ---
 
@@ -251,6 +291,11 @@
 - **Triệu chứng**: "Connection refused" hoặc timeout
 - **Nguyên nhân**: Server chưa chạy hoặc sai port
 - **Giải pháp**: Chạy `python backend/app.py` trước
+
+### Lỗi duplicate data:
+- **Triệu chứng**: "Khoa đã tồn tại" hoặc "Employee code đã tồn tại"
+- **Nguyên nhân**: Chạy script tạo data nhiều lần
+- **Giải pháp**: Normal behavior, script sẽ skip duplicate
 
 ### Lỗi database:
 - **Triệu chứng**: "Table doesn't exist" hoặc migration errors
@@ -276,6 +321,11 @@
 cd d:\Code_Progress\APP_CHAM_CONG_2\teacher-attendance-app
 ```
 
+### Tạo dữ liệu mẫu (chỉ chạy 1 lần):
+```bash
+python create_sample_data.py
+```
+
 ### Start server:
 ```bash
 python backend/app.py
@@ -290,6 +340,29 @@ python test_application.py
 - Console: Real-time progress
 - File JSON: Chi tiết từng test case
 - Summary: Tổng kết cuối chương trình
+
+---
+
+## 🎉 WORKFLOW HOÀN CHỈNH
+
+### Lần đầu setup:
+1. **Clone/setup project**
+2. **Chạy server**: `python backend/app.py`
+3. **Tạo dữ liệu**: `python create_sample_data.py`
+4. **Kiểm tra**: Truy cập http://127.0.0.1:5000
+5. **Test**: `python test_application.py`
+
+### Development workflow:
+1. **Sửa code**
+2. **Restart server**
+3. **Test specific feature**
+4. **Run full test suite**
+
+### Demo workflow:
+1. **Reset database** (nếu cần)
+2. **Tạo dữ liệu mẫu**
+3. **Demo các tính năng**
+4. **Chạy test để verify**
 
 ---
 

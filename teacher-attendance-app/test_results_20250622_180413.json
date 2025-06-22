@@ -1,0 +1,254 @@
+{
+  "timestamp": "2025-06-22T18:04:13.445578",
+  "base_url": "http://127.0.0.1:5000",
+  "total_tests": 35,
+  "passed": 35,
+  "failed": 0,
+  "results": [
+    {
+      "test": "Homepage",
+      "success": true,
+      "message": "Trang chủ load thành công",
+      "timestamp": "2025-06-22T18:04:08.911274",
+      "data": null
+    },
+    {
+      "test": "Page: Homepage",
+      "success": true,
+      "message": "Load thành công",
+      "timestamp": "2025-06-22T18:04:08.921236",
+      "data": null
+    },
+    {
+      "test": "Page: Teachers Page",
+      "success": true,
+      "message": "Load thành công",
+      "timestamp": "2025-06-22T18:04:09.048492",
+      "data": null
+    },
+    {
+      "test": "Page: Subjects Page",
+      "success": true,
+      "message": "Load thành công",
+      "timestamp": "2025-06-22T18:04:09.301688",
+      "data": null
+    },
+    {
+      "test": "Page: Departments Page",
+      "success": true,
+      "message": "Load thành công",
+      "timestamp": "2025-06-22T18:04:09.421684",
+      "data": null
+    },
+    {
+      "test": "Page: Degrees Page",
+      "success": true,
+      "message": "Load thành công",
+      "timestamp": "2025-06-22T18:04:09.531635",
+      "data": null
+    },
+    {
+      "test": "Page: Semesters Page",
+      "success": true,
+      "message": "Load thành công",
+      "timestamp": "2025-06-22T18:04:09.642129",
+      "data": null
+    },
+    {
+      "test": "Page: Teaching Assignments Page",
+      "success": true,
+      "message": "Load thành công",
+      "timestamp": "2025-06-22T18:04:09.883630",
+      "data": null
+    },
+    {
+      "test": "Page: Class Sections Page",
+      "success": true,
+      "message": "Load thành công",
+      "timestamp": "2025-06-22T18:04:10.040277",
+      "data": null
+    },
+    {
+      "test": "Page: Salary Settings Page",
+      "success": true,
+      "message": "Load thành công",
+      "timestamp": "2025-06-22T18:04:10.201625",
+      "data": null
+    },
+    {
+      "test": "Page: Salary Calculations Page",
+      "success": true,
+      "message": "Load thành công",
+      "timestamp": "2025-06-22T18:04:10.334245",
+      "data": null
+    },
+    {
+      "test": "Page: Salary History Page",
+      "success": true,
+      "message": "Load thành công",
+      "timestamp": "2025-06-22T18:04:10.492101",
+      "data": null
+    },
+    {
+      "test": "Page: Teacher Statistics Page",
+      "success": true,
+      "message": "Load thành công",
+      "timestamp": "2025-06-22T18:04:10.672098",
+      "data": null
+    },
+    {
+      "test": "Page: Subject Statistics Page",
+      "success": true,
+      "message": "Load thành công",
+      "timestamp": "2025-06-22T18:04:10.866879",
+      "data": null
+    },
+    {
+      "test": "Page: Reports Page",
+      "success": true,
+      "message": "Load thành công",
+      "timestamp": "2025-06-22T18:04:10.992214",
+      "data": null
+    },
+    {
+      "test": "Get Departments",
+      "success": true,
+      "message": "Tìm thấy 21 khoa",
+      "timestamp": "2025-06-22T18:04:11.142217",
+      "data": null
+    },
+    {
+      "test": "Create Department",
+      "success": true,
+      "message": "Tạo khoa thành công",
+      "timestamp": "2025-06-22T18:04:11.214729",
+      "data": null
+    },
+    {
+      "test": "Get Degrees",
+      "success": true,
+      "message": "Tìm thấy 16 bằng cấp",
+      "timestamp": "2025-06-22T18:04:11.243719",
+      "data": null
+    },
+    {
+      "test": "Create Degree",
+      "success": true,
+      "message": "Tạo bằng cấp thành công",
+      "timestamp": "2025-06-22T18:04:11.264685",
+      "data": null
+    },
+    {
+      "test": "Get Teachers",
+      "success": true,
+      "message": "Tìm thấy 86 giảng viên",
+      "timestamp": "2025-06-22T18:04:11.376714",
+      "data": null
+    },
+    {
+      "test": "Create Teacher",
+      "success": true,
+      "message": "Tạo giảng viên thành công",
+      "timestamp": "2025-06-22T18:04:11.407328",
+      "data": null
+    },
+    {
+      "test": "Get Subjects Page",
+      "success": true,
+      "message": "Trang quản lý học phần load thành công",
+      "timestamp": "2025-06-22T18:04:11.514371",
+      "data": null
+    },
+    {
+      "test": "Create Subject",
+      "success": true,
+      "message": "Tạo học phần thành công",
+      "timestamp": "2025-06-22T18:04:11.534329",
+      "data": null
+    },
+    {
+      "test": "Get Semesters List",
+      "success": true,
+      "message": "Tìm thấy 18 kỳ học",
+      "timestamp": "2025-06-22T18:04:11.545327",
+      "data": null
+    },
+    {
+      "test": "CREATE Semester",
+      "success": true,
+      "message": "Tạo kỳ học thành công",
+      "timestamp": "2025-06-22T18:04:11.570353",
+      "data": null
+    },
+    {
+      "test": "CREATE Semester Verification",
+      "success": true,
+      "message": "Semester đã được tạo với ID: 25",
+      "timestamp": "2025-06-22T18:04:12.101324",
+      "data": null
+    },
+    {
+      "test": "GET Single Semester",
+      "success": true,
+      "message": "Lấy thông tin semester ID 25 thành công",
+      "timestamp": "2025-06-22T18:04:12.119275",
+      "data": null
+    },
+    {
+      "test": "UPDATE Semester",
+      "success": true,
+      "message": "Cập nhật semester ID 25 thành công",
+      "timestamp": "2025-06-22T18:04:12.158069",
+      "data": null
+    },
+    {
+      "test": "UPDATE Semester Verification",
+      "success": true,
+      "message": "Dữ liệu đã được cập nhật đúng",
+      "timestamp": "2025-06-22T18:04:12.681105",
+      "data": null
+    },
+    {
+      "test": "DELETE Semester",
+      "success": true,
+      "message": "Xóa semester ID 25 thành công",
+      "timestamp": "2025-06-22T18:04:12.737765",
+      "data": null
+    },
+    {
+      "test": "DELETE Semester Verification",
+      "success": true,
+      "message": "Semester đã được xóa khỏi database",
+      "timestamp": "2025-06-22T18:04:13.260879",
+      "data": null
+    },
+    {
+      "test": "Error Handling - Invalid Data",
+      "success": true,
+      "message": "Server xử lý lỗi dữ liệu thiếu đúng cách",
+      "timestamp": "2025-06-22T18:04:13.276873",
+      "data": null
+    },
+    {
+      "test": "Error Handling - Not Found",
+      "success": true,
+      "message": "Server xử lý ID không tồn tại đúng cách",
+      "timestamp": "2025-06-22T18:04:13.298850",
+      "data": null
+    },
+    {
+      "test": "Teacher Statistics",
+      "success": true,
+      "message": "Thống kê GV: 87 tổng, 87 hoạt động",
+      "timestamp": "2025-06-22T18:04:13.387845",
+      "data": null
+    },
+    {
+      "test": "Subject Statistics",
+      "success": true,
+      "message": "Thống kê HP: 126 tổng, 126 hoạt động",
+      "timestamp": "2025-06-22T18:04:13.436614",
+      "data": null
+    }
+  ]
+}
