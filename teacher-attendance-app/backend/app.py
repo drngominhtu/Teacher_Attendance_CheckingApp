@@ -2309,6 +2309,248 @@ def calculate_teacher_yearly_salary(teacher_id, year):
         print(f"Error calculating yearly salary: {e}")
         return {'error': str(e)}
 
+# Fix API Routes for Semesters
+@app.route('/api/semesters', methods=['POST'])
+def api_create_semester():
+    try:
+        data = request.get_json()
+        print(f"Creating semester with data: {data}")  # Debug log
+        
+        if not data:
+            return jsonify({'success': False, 'message': 'Không có dữ liệu được gửi'})
+        
+        # Validate required fields
+        required_fields = ['name', 'year', 'start_date', 'end_date']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'success': False, 'message': f'{field} không được để trống'})
+        
+        # Check for existing semester
+        existing = Semester.query.filter_by(name=data['name'], year=data['year']).first()
+        if existing:
+            return jsonify({'success': False, 'message': 'Kỳ học này đã tồn tại'})
+        
+        # Parse dates
+        from datetime import datetime as dt_parser
+        try:
+            start_date = dt_parser.strptime(data['start_date'], '%Y-%m-%d').date()
+            end_date = dt_parser.strptime(data['end_date'], '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({'success': False, 'message': 'Định dạng ngày không hợp lệ'})
+        
+        # Create semester
+        semester = Semester(
+            name=data['name'],
+            year=int(data['year']),
+            start_date=start_date,
+            end_date=end_date,
+            is_current=data.get('is_current', False)
+        )
+        
+        # Add description if field exists and provided
+        if hasattr(Semester, 'description') and data.get('description'):
+            semester.description = data['description']
+        
+        # If this is set as current, make all others non-current
+        if semester.is_current:
+            Semester.query.update({'is_current': False})
+        
+        db.session.add(semester)
+        db.session.commit()
+        
+        print(f"Created semester successfully: {semester.name} - {semester.year}")  # Debug log
+        return jsonify({'success': True, 'message': 'Kỳ học đã được tạo thành công!'})
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error creating semester: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/semesters/list', methods=['GET'])
+def api_get_semesters_list():
+    try:
+        print("Getting semesters list...")  # Debug log
+        
+        # Get filter parameter
+        year = request.args.get('year')
+        
+        query = Semester.query.filter_by(is_active=True)
+        if year:
+            query = query.filter_by(year=int(year))
+        
+        semesters = query.order_by(Semester.year.desc(), Semester.name.desc()).all()
+        print(f"Found {len(semesters)} semesters")  # Debug log
+        
+        # Create safe semester data
+        semesters_data = []
+        for semester in semesters:
+            try:
+                semester_dict = {
+                    'id': semester.id,
+                    'name': semester.name,
+                    'year': semester.year,
+                    'start_date': semester.start_date.isoformat() if semester.start_date else None,
+                    'end_date': semester.end_date.isoformat() if semester.end_date else None,
+                    'is_current': getattr(semester, 'is_current', False)
+                }
+                
+                # Add description only if it exists
+                if hasattr(semester, 'description'):
+                    semester_dict['description'] = getattr(semester, 'description', '')
+                
+                semesters_data.append(semester_dict)
+                print(f"Added semester: {semester.name} - {semester.year}")  # Debug log
+                
+            except Exception as e:
+                print(f"Error processing semester {semester.id}: {e}")
+                continue
+        
+        return jsonify({'success': True, 'semesters': semesters_data})
+        
+    except Exception as e:
+        print(f"Error getting semesters list: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Lỗi server: {str(e)}'})
+
+@app.route('/api/semesters/<int:id>', methods=['GET'])
+def api_get_semester(id):
+    try:
+        print(f"Getting semester ID: {id}")  # Debug log
+        
+        semester = Semester.query.get(id)
+        if not semester:
+            print(f"Semester {id} not found")  # Debug log
+            return jsonify({'success': False, 'message': 'Không tìm thấy kỳ học'})
+        
+        print(f"Found semester: {semester.name} - {semester.year}")  # Debug log
+        
+        # Create safe semester dict
+        semester_dict = {
+            'id': semester.id,
+            'name': semester.name,
+            'year': semester.year,
+            'start_date': semester.start_date.isoformat() if semester.start_date else None,
+            'end_date': semester.end_date.isoformat() if semester.end_date else None,
+            'is_current': getattr(semester, 'is_current', False)
+        }
+        
+        # Add description only if it exists
+        if hasattr(semester, 'description'):
+            semester_dict['description'] = getattr(semester, 'description', '')
+        
+        print(f"Returning semester data: {semester_dict}")  # Debug log
+        return jsonify({'success': True, 'semester': semester_dict})
+        
+    except Exception as e:
+        print(f"Error getting semester {id}: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Lỗi server: {str(e)}'})
+
+@app.route('/api/semesters/<int:id>', methods=['PUT'])
+def api_update_semester(id):
+    try:
+        print(f"Updating semester ID: {id}")  # Debug log
+        
+        semester = Semester.query.get(id)
+        if not semester:
+            return jsonify({'success': False, 'message': 'Không tìm thấy kỳ học'})
+        
+        data = request.get_json()
+        print(f"Update data: {data}")  # Debug log
+        
+        # Check for existing semester with same name/year (exclude current)
+        if data.get('name') and data.get('year'):
+            if data['name'] != semester.name or int(data['year']) != semester.year:
+                existing = Semester.query.filter_by(name=data['name'], year=int(data['year'])).first()
+                if existing:
+                    return jsonify({'success': False, 'message': 'Kỳ học này đã tồn tại'})
+        
+        # Update fields
+        semester.name = data.get('name', semester.name)
+        semester.year = int(data.get('year', semester.year))
+        
+        # Handle dates
+        if data.get('start_date'):
+            from datetime import datetime as dt_parser
+            try:
+                semester.start_date = dt_parser.strptime(data['start_date'], '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify({'success': False, 'message': 'Định dạng ngày bắt đầu không hợp lệ'})
+                
+        if data.get('end_date'):
+            from datetime import datetime as dt_parser
+            try:
+                semester.end_date = dt_parser.strptime(data['end_date'], '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify({'success': False, 'message': 'Định dạng ngày kết thúc không hợp lệ'})
+        
+        # Handle is_current
+        if data.get('is_current') and not getattr(semester, 'is_current', False):
+            # Make all others non-current first
+            Semester.query.update({'is_current': False})
+            semester.is_current = True
+        elif 'is_current' in data and not data['is_current']:
+            semester.is_current = False
+        
+        # Update description if field exists
+        if hasattr(semester, 'description') and 'description' in data:
+            semester.description = data.get('description', '')
+        
+        db.session.commit()
+        
+        print(f"Updated semester successfully: {semester.name} - {semester.year}")  # Debug log
+        return jsonify({'success': True, 'message': 'Kỳ học đã được cập nhật thành công!'})
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error updating semester: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/semesters/<int:id>', methods=['DELETE'])
+def api_delete_semester(id):
+    try:
+        print(f"Deleting semester ID: {id}")  # Debug log
+        
+        semester = Semester.query.get(id)
+        if not semester:
+            return jsonify({'success': False, 'message': 'Không tìm thấy kỳ học'})
+        
+        # Check dependencies before deleting
+        try:
+            if 'TeachingAssignment' in globals():
+                assignment_count = TeachingAssignment.query.filter_by(semester_id=id).count()
+                if assignment_count > 0:
+                    return jsonify({'success': False, 'message': f'Không thể xóa kỳ học đang có {assignment_count} phân công giảng dạy'})
+        except:
+            pass
+        
+        try:
+            if 'ClassSection' in globals():
+                class_count = ClassSection.query.filter_by(semester_id=id).count()
+                if class_count > 0:
+                    return jsonify({'success': False, 'message': f'Không thể xóa kỳ học đang có {class_count} lớp học phần'})
+        except:
+            pass
+        
+        db.session.delete(semester)
+        db.session.commit()
+        
+        print(f"Deleted semester successfully: {semester.name} - {semester.year}")  # Debug log
+        return jsonify({'success': True, 'message': 'Kỳ học đã được xóa thành công!'})
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error deleting semester: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': str(e)})
+
 # Make sure app runs
 if __name__ == '__main__':
     try:
